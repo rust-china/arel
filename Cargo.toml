@@ -3,6 +3,10 @@ members = [".", "arel_macros", "arel_codegen"]
 
 [workspace.dependencies]
 log = "0.4"
+serde = { version = "1.0" }
+regex = "1.9"
+anyhow = "1"
+
 chrono = { version = "0.4", features = ["serde"] }
 
 [package]
@@ -24,10 +28,17 @@ mysql = ["sqlx/mysql", "sqlx/any"]
 runtime-tokio = ["sqlx/runtime-tokio"]
 runtime-async-std = ["sqlx/runtime-async-std"]
 
+serde = ["serde/derive"]
+
 [package.metadata.docs.rs]
 features = ["sqlite"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sqlx = { version = "0.7.1", features = ["chrono"] }
+serde = { workspace = true, optional = true }
+
 chrono = { workspace = true }
+regex = { workspace = true }
+anyhow = { workspace = true }
+sqlx = { version = "0.7.1", features = ["chrono"] }
+
