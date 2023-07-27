@@ -1,6 +1,10 @@
 pub mod prelude;
+pub mod sql;
+pub mod statements;
 pub mod traits;
 pub mod value;
+
+pub use sql::Sql;
 pub use value::Value;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -41,7 +45,8 @@ where
     /// assert_eq!(unchanged.change(true), &ActiveValue::Changed(true, Some(Box::new(old_value))));
     ///
     /// let mut changed = ActiveValue::Changed(1, Some(Box::new(ActiveValue::NotSet)));
-    /// assert_eq!(changed.change(3), &ActiveValue::Changed(3, Some(Box::new(ActiveValue::NotSet))));
+    /// assert_eq!(changed.change(1), &ActiveValue::Changed(1, Some(Box::new(ActiveValue::NotSet))));
+    /// assert_eq!(changed.change(2), &ActiveValue::Changed(2, Some(Box::new(ActiveValue::NotSet))));
     /// ```
     pub fn change(&mut self, v: V) -> &mut Self {
         match self {

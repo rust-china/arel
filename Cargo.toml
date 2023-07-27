@@ -7,6 +7,8 @@ serde = { version = "1.0" }
 regex = "1.9"
 anyhow = "1"
 
+uuid = "1.4"
+serde_json = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 
 [package]
@@ -21,24 +23,27 @@ categories = ["database"]
 keywords = ["async", "orm", "sqlite", "mysql", "postgres"]
 
 [features]
-default = ["runtime-tokio"]
+default = ["runtime-tokio", "with-json", "with-chrono"]
 sqlite = ["sqlx/sqlite", "sqlx/any"]
 postgres = ["sqlx/postgres", "sqlx/any"]
 mysql = ["sqlx/mysql", "sqlx/any"]
 runtime-tokio = ["sqlx/runtime-tokio"]
 runtime-async-std = ["sqlx/runtime-async-std"]
 
-serde = ["serde/derive"]
+with-json = ["serde_json", "chrono?/serde", "uuid?/serde", "sqlx?/json"]
+with-chrono = ["chrono", "sqlx?/chrono"]
 
 [package.metadata.docs.rs]
 features = ["sqlite"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = { workspace = true, optional = true }
-
-chrono = { workspace = true }
 regex = { workspace = true }
 anyhow = { workspace = true }
-sqlx = { version = "0.7.1", features = ["chrono"] }
 
+serde = { workspace = true }
+serde_json = { workspace = true, optional = true }
+chrono = { workspace = true, optional = true }
+
+uuid = { workspace = true, optional = true }
+sqlx = { version = "0.7.1", optional = true }

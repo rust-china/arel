@@ -73,8 +73,8 @@ pub trait ArelBase {
     fn validates(&self) -> anyhow::Result<()> {
         Ok(())
     }
-    fn speak(&self) {
-        print!("hello")
+    fn to_sql(&self) {
+        println!("todo");
     }
 }
 
@@ -111,7 +111,7 @@ mod tests {
         let users: Vec<&dyn ArelModel> = vec![&user];
         // keep trait safe
         for user in users {
-            user.speak();
+            user.to_sql();
         }
     }
 }
