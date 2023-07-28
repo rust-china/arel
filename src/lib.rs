@@ -4,6 +4,7 @@ pub mod statements;
 pub mod traits;
 pub mod value;
 
+pub use bytes::Bytes;
 pub use sql::Sql;
 pub use value::Value;
 

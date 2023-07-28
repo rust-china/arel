@@ -21,7 +21,8 @@ pub enum Value {
     String(Option<Box<String>>),
 
     #[allow(clippy::box_collection)]
-    Bytes(Option<Box<Vec<u8>>>),
+    Bytes(Option<Box<bytes::Bytes>>),
+    Array(Option<Box<Vec<Value>>>),
 
     #[cfg(feature = "with-json")]
     #[cfg_attr(docsrs, doc(cfg(feature = "with-json")))]
@@ -116,15 +117,21 @@ impl From<Cow<'_, str>> for Value {
     }
 }
 
-impl From<&Vec<u8>> for Value {
-    fn from(val: &Vec<u8>) -> Self {
+impl From<&bytes::Bytes> for Value {
+    fn from(val: &bytes::Bytes) -> Self {
         Value::Bytes(Some(Box::new(val.clone())))
     }
 }
-
-impl From<Vec<u8>> for Value {
-    fn from(val: Vec<u8>) -> Self {
+impl From<bytes::Bytes> for Value {
+    fn from(val: bytes::Bytes) -> Self {
         Value::Bytes(Some(Box::new(val)))
+    }
+}
+
+impl<T: Into<Value>> From<Vec<T>> for Value {
+    fn from(vals: Vec<T>) -> Self {
+        let vals = vals.into_iter().map(|v| v.into()).collect();
+        Value::Array(Some(Box::new(vals)))
     }
 }
 
@@ -170,20 +177,29 @@ impl Value {
     /// ```
     /// use arel::prelude::*;
     /// use chrono::{TimeZone};
+    ///
     /// let value: Value = true.into();
-    /// assert_eq!(value.to_sql().to_sql_string().unwrap(), "TRUE");
+    /// assert_eq!(value.to_sql().to_sql_string().unwrap(), "1");
+    ///
     /// let value: Value = false.into();
-    /// assert_eq!(value.to_sql().to_sql_string().unwrap(), "FALSE");
+    /// assert_eq!(value.to_sql().to_sql_string().unwrap(), "0");
+    ///
     /// let value: Value = 0.into();
     /// assert_eq!(value.to_sql().to_sql_string().unwrap(), "0");
+    ///
     /// let value: Value = 0.1.into();
     /// assert_eq!(value.to_sql().to_sql_string().unwrap(), "0.1");
-    /// let vec: Vec<u8> = vec![1, 2, 3];
-    /// let value: Value = vec.into();
-    /// assert_eq!(value.to_sql().to_sql_string().unwrap(), "[1,2,3]");
+    ///
+    /// let value: Value = bytes::Bytes::from_static(b"hello").into();
+    /// assert_eq!(value.to_sql().to_sql_string().unwrap(), r#"b"hello""#);
+    ///
+    /// let value: Value = vec![1, 2, 3].into();
+    /// assert_eq!(value.to_sql().to_sql_string().unwrap(), "(1,2,3)");
+    ///
     /// let json: serde_json::Value = serde_json::from_str(r#"{"hello":"world"}"#).unwrap();
     /// let value: Value = json.into();
     /// assert_eq!(value.to_sql().to_sql_string().unwrap(), r#"{"hello":"world"}"#);
+    ///
     /// let utc_time = chrono::Utc.with_ymd_and_hms(2023, 12, 31, 0, 0, 0).unwrap();
     /// let value: Value = utc_time.into();
     /// assert_eq!(value.to_sql().to_sql_string().unwrap(), r#"2023-12-31 00:00:00 +00:00"#);
@@ -193,9 +209,9 @@ impl Value {
             Value::Bool(val) => match val {
                 Some(v) => {
                     if *v {
-                        crate::Sql::new("TRUE")
+                        crate::Sql::new("1")
                     } else {
-                        crate::Sql::new("FALSE")
+                        crate::Sql::new("0")
                     }
                 }
                 None => crate::Sql::new("NULL"),
@@ -249,7 +265,14 @@ impl Value {
                 None => crate::Sql::new("NULL"),
             },
             Value::Bytes(val) => match val {
-                Some(v) => crate::Sql::new(serde_json::to_string(v).unwrap()),
+                Some(v) => crate::Sql::new_with_prepare("?", bytes::Bytes::copy_from_slice(v)),
+                None => crate::Sql::new("null"),
+            },
+            Value::Array(val) => match val {
+                Some(vec) => {
+                    let vec: Vec<String> = vec.iter().map(|v| v.to_sql().value).collect();
+                    crate::Sql::new(format!("({})", vec.join(",")))
+                }
                 None => crate::Sql::new("null"),
             },
             Value::Json(val) => match val {
