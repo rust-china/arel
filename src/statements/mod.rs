@@ -1,3 +1,4 @@
+pub mod filter;
 pub mod group;
 pub mod limit;
 pub mod offset;

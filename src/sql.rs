@@ -25,7 +25,6 @@ impl Sql {
     ///
     /// ```
     /// use arel::prelude::*;
-    /// use arel::statements::r#where::Where;
     /// struct User {}
     /// impl ArelBase for User {}
     ///
