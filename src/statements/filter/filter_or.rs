@@ -14,9 +14,9 @@ impl ArelSubFilterStatement for FilterOr {
         Some(&mut self.sqls)
     }
     fn join_str(&self) -> &'static str {
-        "OR"
+        " OR "
     }
-    fn order(&self) -> i32 {
-        1
-    }
+    // fn order(&self) -> i32 {
+    //     1
+    // }
 }

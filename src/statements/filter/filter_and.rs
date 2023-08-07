@@ -13,4 +13,7 @@ impl ArelSubFilterStatement for FilterAnd {
     fn sqls_mut(&mut self) -> Option<&mut Vec<crate::Sql>> {
         Some(&mut self.sqls)
     }
+    fn join_str(&self) -> &'static str {
+        " AND "
+    }
 }

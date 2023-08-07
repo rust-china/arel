@@ -11,13 +11,11 @@ use crate::prelude::ArelBase;
 pub(crate) trait ArelSubFilterStatement {
     fn sqls(&self) -> Option<&Vec<crate::Sql>>;
     fn sqls_mut(&mut self) -> Option<&mut Vec<crate::Sql>>;
-    fn join_str(&self) -> &'static str {
-        "AND"
-    }
+    fn join_str(&self) -> &'static str;
     // 按值从小到大排序
-    fn order(&self) -> i32 {
-        0
-    }
+    // fn order(&self) -> i32 {
+    //     0
+    // }
     fn to_sql(&self) -> Option<crate::Sql> {
         match self.sqls() {
             Some(sqls) => {
@@ -27,7 +25,7 @@ pub(crate) trait ArelSubFilterStatement {
                     for (idx, sql) in sqls.iter().enumerate() {
                         final_sql.push_sql(sql.clone());
                         if idx < len - 1 {
-                            final_sql.push_str(" AND ");
+                            final_sql.push_str(self.join_str());
                         }
                     }
                     Some(final_sql)
@@ -47,15 +45,15 @@ pub struct Filter<M: ArelBase> {
 
 impl<T: ArelBase> ArelStatement for Filter<T> {
     fn to_sql(&self) -> Option<crate::Sql> {
-        let mut sub_filters: Vec<&Box<dyn ArelSubFilterStatement>> = self.sub_filters.iter().collect();
+        let sub_filters: Vec<&Box<dyn ArelSubFilterStatement>> = self.sub_filters.iter().collect();
         if self.sub_filters.len() > 0 {
             let mut final_sql = crate::Sql::new("");
-            sub_filters.sort_by(|a, b| a.order().partial_cmp(&b.order()).unwrap());
+            // sub_filters.sort_by(|a, b| a.order().partial_cmp(&b.order()).unwrap());
             for (idx, sub_filters) in sub_filters.into_iter().enumerate() {
                 let sql = sub_filters.to_sql();
                 if let Some(sql) = sql {
                     if idx >= 1 {
-                        final_sql.push(' ').push_str(sub_filters.join_str()).push(' ');
+                        final_sql.push_str(sub_filters.join_str());
                     }
                     final_sql.push('(').push_sql(sql).push(')');
                 }
@@ -188,7 +186,7 @@ impl<M: ArelBase> Filter<M> {
     /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = "sanmu") OR ("user"."age" IN (18,20))"#);
     ///
     /// filter.filter_and("gender", "male");
-    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."gender" = "male") OR ("user"."username" = "sanmu") OR ("user"."age" IN (18,20))"#);
+    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = "sanmu") OR ("user"."age" IN (18,20)) AND ("user"."gender" = "male")"#);
     ///
     /// ```
     pub fn filter_or<K: AsRef<str>, V: Into<crate::Value>>(&mut self, key: K, value: V) -> &mut Self {
@@ -203,10 +201,10 @@ impl<M: ArelBase> Filter<M> {
     /// impl ArelBase for User {}
     /// let mut filter = Filter::<User>::new();
     /// filter.filter_or_pairs(vec![("username", Into::<arel::Value>::into("sanmu")), ("age", Into::<arel::Value>::into(vec![18, 20]))]);
-    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = "sanmu" AND "user"."age" IN (18,20))"#);
+    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = "sanmu" OR "user"."age" IN (18,20))"#);
     ///
     /// filter.filter_and("gender", "male");
-    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."gender" = "male") OR ("user"."username" = "sanmu" AND "user"."age" IN (18,20))"#);
+    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = "sanmu" OR "user"."age" IN (18,20)) AND ("user"."gender" = "male")"#);
     ///
     /// ```
     pub fn filter_or_pairs<K: AsRef<str>, V: Into<crate::Value>>(&mut self, pairs: Vec<(K, V)>) -> &mut Self {
@@ -328,10 +326,10 @@ mod tests {
         filter_or.sqls.push(crate::Sql::new_with_prepares("name = ?", vec!["sanmu"]));
         assert_eq!(filter_or.to_sql().unwrap().to_sql_string().unwrap(), r#"name = "sanmu""#);
         filter_or.sqls.push(crate::Sql::new_with_prepares("age = ?", vec![18]));
-        assert_eq!(filter_or.to_sql().unwrap().to_sql_string().unwrap(), r#"name = "sanmu" AND age = 18"#);
+        assert_eq!(filter_or.to_sql().unwrap().to_sql_string().unwrap(), r#"name = "sanmu" OR age = 18"#);
         filter.sub_filters.push(Box::new(filter_or));
         assert!(filter.to_sql().is_some());
-        assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"(name = "sanmu" AND age = 18) OR (name = "sanmu" AND age = 18)"#);
+        assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"(name = "sanmu" AND age = 18) OR (name = "sanmu" OR age = 18)"#);
 
         // bytes
         let mut filter_and = FilterAnd::default();
