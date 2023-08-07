@@ -29,6 +29,6 @@ mod tests {
         impl ArelBase for User {}
 
         let offset = Offset::new(10);
-        assert_eq!(offset.to_sql().unwrap().to_sql_string().unwrap(), "Offset 10");
+        assert_eq!(offset.to_sql().unwrap().to_sql_string().unwrap(), "OFFSET 10");
     }
 }

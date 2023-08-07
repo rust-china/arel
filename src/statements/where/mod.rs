@@ -70,7 +70,7 @@ impl<M: ArelBase> Where<M> {
     pub fn new() -> Self {
         Self {
             sub_wheres: vec![],
-            _mark: PhantomData,
+            _mark: PhantomData::<M>,
         }
     }
     /// # Examples
@@ -88,7 +88,7 @@ impl<M: ArelBase> Where<M> {
     /// assert_eq!(r#where.to_sql().unwrap().to_sql_string().unwrap(), r#"WHERE ("user"."username" = "sanmu") AND ("user"."age" IN (18,20))"#);
     ///
     /// ```
-    pub fn where_and<K: ToString, V: Into<crate::Value>>(&mut self, key: K, value: V) -> &mut Self {
+    pub fn where_and<K: AsRef<str>, V: Into<crate::Value>>(&mut self, key: K, value: V) -> &mut Self {
         self.where_and_pairs(vec![(key, value)])
     }
     /// # Examples
@@ -106,7 +106,7 @@ impl<M: ArelBase> Where<M> {
     /// assert_eq!(r#where.to_sql().unwrap().to_sql_string().unwrap(), r#"WHERE ("user"."username" = "sanmu" AND "user"."age" IN (18,20)) AND ("user"."gender" = "male")"#);
     ///
     /// ```
-    pub fn where_and_pairs<K: ToString, V: Into<crate::Value>>(&mut self, pairs: Vec<(K, V)>) -> &mut Self {
+    pub fn where_and_pairs<K: AsRef<str>, V: Into<crate::Value>>(&mut self, pairs: Vec<(K, V)>) -> &mut Self {
         let table_name = M::table_name();
         let mut where_and = WhereAnd::default();
         for (key, value) in pairs.into_iter() {
@@ -114,11 +114,11 @@ impl<M: ArelBase> Where<M> {
             let value: crate::Value = value.into();
             match &value {
                 crate::Value::Array(_) => {
-                    sql.push_str(format!(r#""{}"."{}" IN "#, table_name, key.to_string()));
+                    sql.push_str(format!(r#""{}"."{}" IN "#, table_name, key.as_ref()));
                     sql.push_sql(value.to_sql());
                 }
                 _ => {
-                    sql.push_str(format!(r#""{}"."{}" = "#, table_name, key.to_string()));
+                    sql.push_str(format!(r#""{}"."{}" = "#, table_name, key.as_ref()));
                     sql.push_sql(value.to_sql());
                 }
             }
@@ -127,9 +127,9 @@ impl<M: ArelBase> Where<M> {
         self.sub_wheres.push(Box::new(where_and));
         self
     }
-    pub fn where_and_sql(&mut self, sql: crate::Sql) -> &mut Self {
+    pub fn where_and_sql<S: Into<crate::Sql>>(&mut self, sql: S) -> &mut Self {
         let mut where_and = WhereAnd::default();
-        where_and.sqls.push(sql);
+        where_and.sqls.push(sql.into());
         self.sub_wheres.push(Box::new(where_and));
         self
     }
@@ -148,10 +148,10 @@ impl<M: ArelBase> Where<M> {
     /// assert_eq!(r#where.to_sql().unwrap().to_sql_string().unwrap(), r#"WHERE ("user"."username" != "sanmu") AND ("user"."aga" NOT IN (18,20))"#);
     ///
     /// ```
-    pub fn where_and_not<K: ToString, V: Into<crate::Value>>(&mut self, key: K, value: V) -> &mut Self {
+    pub fn where_and_not<K: AsRef<str>, V: Into<crate::Value>>(&mut self, key: K, value: V) -> &mut Self {
         self.where_and_not_pairs(vec![(key, value)])
     }
-    pub fn where_and_not_pairs<K: ToString, V: Into<crate::Value>>(&mut self, pairs: Vec<(K, V)>) -> &mut Self {
+    pub fn where_and_not_pairs<K: AsRef<str>, V: Into<crate::Value>>(&mut self, pairs: Vec<(K, V)>) -> &mut Self {
         let table_name = M::table_name();
         let mut where_and = WhereAnd::default();
         for (key, value) in pairs.into_iter() {
@@ -159,11 +159,11 @@ impl<M: ArelBase> Where<M> {
             let value: crate::Value = value.into();
             match &value {
                 crate::Value::Array(_) => {
-                    sql.push_str(format!(r#""{}"."{}" NOT IN "#, table_name, key.to_string()));
+                    sql.push_str(format!(r#""{}"."{}" NOT IN "#, table_name, key.as_ref()));
                     sql.push_sql(value.to_sql());
                 }
                 _ => {
-                    sql.push_str(format!(r#""{}"."{}" != "#, table_name, key.to_string()));
+                    sql.push_str(format!(r#""{}"."{}" != "#, table_name, key.as_ref()));
                     sql.push_sql(value.to_sql());
                 }
             }
@@ -190,7 +190,7 @@ impl<M: ArelBase> Where<M> {
     /// assert_eq!(r#where.to_sql().unwrap().to_sql_string().unwrap(), r#"WHERE ("user"."gender" = "male") OR ("user"."username" = "sanmu") OR ("user"."age" IN (18,20))"#);
     ///
     /// ```
-    pub fn where_or<K: ToString, V: Into<crate::Value>>(&mut self, key: K, value: V) -> &mut Self {
+    pub fn where_or<K: AsRef<str>, V: Into<crate::Value>>(&mut self, key: K, value: V) -> &mut Self {
         self.where_or_pairs(vec![(key, value)])
     }
     /// # Examples
@@ -208,7 +208,7 @@ impl<M: ArelBase> Where<M> {
     /// assert_eq!(r#where.to_sql().unwrap().to_sql_string().unwrap(), r#"WHERE ("user"."gender" = "male") OR ("user"."username" = "sanmu" AND "user"."age" IN (18,20))"#);
     ///
     /// ```
-    pub fn where_or_pairs<K: ToString, V: Into<crate::Value>>(&mut self, pairs: Vec<(K, V)>) -> &mut Self {
+    pub fn where_or_pairs<K: AsRef<str>, V: Into<crate::Value>>(&mut self, pairs: Vec<(K, V)>) -> &mut Self {
         let table_name = M::table_name();
         let mut where_or = WhereOr::default();
         for (key, value) in pairs.into_iter() {
@@ -216,11 +216,11 @@ impl<M: ArelBase> Where<M> {
             let value: crate::Value = value.into();
             match &value {
                 crate::Value::Array(_) => {
-                    sql.push_str(format!(r#""{}"."{}" IN "#, table_name, key.to_string()));
+                    sql.push_str(format!(r#""{}"."{}" IN "#, table_name, key.as_ref()));
                     sql.push_sql(value.to_sql());
                 }
                 _ => {
-                    sql.push_str(format!(r#""{}"."{}" = "#, table_name, key.to_string()));
+                    sql.push_str(format!(r#""{}"."{}" = "#, table_name, key.as_ref()));
                     sql.push_sql(value.to_sql());
                 }
             }
@@ -229,9 +229,9 @@ impl<M: ArelBase> Where<M> {
         self.sub_wheres.push(Box::new(where_or));
         self
     }
-    pub fn where_or_sql(&mut self, sql: crate::Sql) -> &mut Self {
+    pub fn where_or_sql<S: Into<crate::Sql>>(&mut self, sql: S) -> &mut Self {
         let mut where_or = WhereOr::default();
-        where_or.sqls.push(sql);
+        where_or.sqls.push(sql.into());
         self.sub_wheres.push(Box::new(where_or));
         self
     }
@@ -250,10 +250,10 @@ impl<M: ArelBase> Where<M> {
     /// assert_eq!(r#where.to_sql().unwrap().to_sql_string().unwrap(), r#"WHERE ("user"."username" != "sanmu") OR ("user"."aga" NOT IN (18,20))"#);
     ///
     /// ```
-    pub fn where_or_not<K: ToString, V: Into<crate::Value>>(&mut self, key: K, value: V) -> &mut Self {
+    pub fn where_or_not<K: AsRef<str>, V: Into<crate::Value>>(&mut self, key: K, value: V) -> &mut Self {
         self.where_or_not_pairs(vec![(key, value)])
     }
-    pub fn where_or_not_pairs<K: ToString, V: Into<crate::Value>>(&mut self, pairs: Vec<(K, V)>) -> &mut Self {
+    pub fn where_or_not_pairs<K: AsRef<str>, V: Into<crate::Value>>(&mut self, pairs: Vec<(K, V)>) -> &mut Self {
         let table_name = M::table_name();
         let mut where_or = WhereOr::default();
         for (key, value) in pairs.into_iter() {
@@ -261,11 +261,11 @@ impl<M: ArelBase> Where<M> {
             let value: crate::Value = value.into();
             match &value {
                 crate::Value::Array(_) => {
-                    sql.push_str(format!(r#""{}"."{}" NOT IN "#, table_name, key.to_string()));
+                    sql.push_str(format!(r#""{}"."{}" NOT IN "#, table_name, key.as_ref()));
                     sql.push_sql(value.to_sql());
                 }
                 _ => {
-                    sql.push_str(format!(r#""{}"."{}" != "#, table_name, key.to_string()));
+                    sql.push_str(format!(r#""{}"."{}" != "#, table_name, key.as_ref()));
                     sql.push_sql(value.to_sql());
                 }
             }
