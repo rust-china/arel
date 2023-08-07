@@ -2,7 +2,9 @@ pub mod filter;
 pub mod group;
 pub mod having;
 pub mod limit;
+pub mod lock;
 pub mod offset;
+pub mod order;
 pub mod r#where;
 
 pub trait ArelStatement {

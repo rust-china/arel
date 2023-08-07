@@ -1,12 +1,12 @@
 use crate::{prelude::ArelBase, statements::ArelStatement};
 use std::marker::PhantomData;
 
-pub struct Group<M: ArelBase> {
+pub struct Order<M: ArelBase> {
     sqls: Vec<crate::Sql>,
     _mark: PhantomData<M>,
 }
 
-impl<M: ArelBase> ArelStatement for Group<M> {
+impl<M: ArelBase> ArelStatement for Order<M> {
     fn sqls(&self) -> Option<&Vec<crate::Sql>> {
         if self.sqls.len() > 0 {
             Some(&self.sqls)
@@ -16,7 +16,7 @@ impl<M: ArelBase> ArelStatement for Group<M> {
     }
     fn to_sql(&self) -> Option<crate::Sql> {
         if let Some(sqls) = self.sqls() {
-            let mut final_sql = crate::Sql::new("GROUP BY ");
+            let mut final_sql = crate::Sql::new("ORDER BY ");
             for (idx, sql) in sqls.iter().enumerate() {
                 if idx >= 1 {
                     final_sql.push_str(", ");
@@ -30,36 +30,39 @@ impl<M: ArelBase> ArelStatement for Group<M> {
     }
 }
 
-impl<M: ArelBase> Group<M> {
+impl<M: ArelBase> Order<M> {
     /// # Examples
     ///
     /// ```
     /// use arel::prelude::*;
-    /// use arel::statements::group::Group;
+    /// use arel::statements::order::Order;
     /// struct User {}
     /// impl ArelBase for User {}
-    /// let group = Group::<User>::new_column("name");
-    /// assert_eq!(group.to_sql().unwrap().to_sql_string().unwrap(), r#"GROUP BY "user"."name""#);
+    /// let order = Order::<User>::new_column("name", arel::DESC);
+    /// assert_eq!(order.to_sql().unwrap().to_sql_string().unwrap(), r#"ORDER BY "user"."name" DESC"#);
     ///
     /// ```
-    pub fn new_column<T: AsRef<str>>(column: T) -> Self {
-        Self::new_columns(vec![column])
+    pub fn new_column<T: AsRef<str>>(column: T, sort: T) -> Self {
+        Self::new_columns(vec![(column, sort)])
     }
     /// # Examples
     ///
     /// ```
     /// use arel::prelude::*;
-    /// use arel::statements::group::Group;
+    /// use arel::statements::order::Order;
     /// struct User {}
     /// impl ArelBase for User {}
-    /// let group = Group::<User>::new_columns(vec!["name", "age"]);
-    /// assert_eq!(group.to_sql().unwrap().to_sql_string().unwrap(), r#"GROUP BY "user"."name", "user"."age""#);
+    /// let order = Order::<User>::new_columns(vec![("name", "DESC"), ("age", "ASC")]);
+    /// assert_eq!(order.to_sql().unwrap().to_sql_string().unwrap(), r#"ORDER BY "user"."name" DESC, "user"."age" ASC"#);
     ///
     /// ```
-    pub fn new_columns<T: AsRef<str>>(columns: Vec<T>) -> Self {
+    pub fn new_columns<T: AsRef<str>>(columns: Vec<(T, T)>) -> Self {
         let table_name = M::table_name();
         Self {
-            sqls: columns.iter().map(|column| crate::Sql::new(format!(r#""{}"."{}""#, table_name, column.as_ref()))).collect(),
+            sqls: columns
+                .iter()
+                .map(|column| crate::Sql::new(format!(r#""{}"."{}" {}"#, table_name, column.0.as_ref(), column.1.as_ref())))
+                .collect(),
             _mark: PhantomData::<M>,
         }
     }
@@ -73,11 +76,11 @@ impl<M: ArelBase> Group<M> {
     ///
     /// ```
     /// use arel::prelude::*;
-    /// use arel::statements::group::Group;
+    /// use arel::statements::order::Order;
     /// struct User {}
     /// impl ArelBase for User {}
-    /// let group = Group::<User>::new_sqls(vec!["name", "age"]);
-    /// assert_eq!(group.to_sql().unwrap().to_sql_string().unwrap(), r#"GROUP BY name, age"#);
+    /// let order = Order::<User>::new_sqls(vec!["name DESC", "age ASC"]);
+    /// assert_eq!(order.to_sql().unwrap().to_sql_string().unwrap(), r#"ORDER BY name DESC, age ASC"#);
     ///
     /// ```
     pub fn new_sqls<S: Into<crate::Sql>>(sqls: Vec<S>) -> Self {
@@ -87,17 +90,3 @@ impl<M: ArelBase> Group<M> {
         }
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use crate::prelude::ArelBase;
-
-//     #[test]
-//     fn to_sql() {
-//         struct User {}
-//         impl ArelBase for User {}
-
-//         // let group = Group::<User>::new("name");
-//         // assert_eq!(group.to_sql().unwrap().to_sql_string().unwrap(), r#"GROUP BY "user"."name""#);
-//     }
-// }

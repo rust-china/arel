@@ -1,3 +1,6 @@
+pub static DESC: &str = "DESC";
+pub static ASC: &str = "ASC";
+
 pub mod prelude;
 pub mod sql;
 pub mod statements;
