@@ -1,5 +1,6 @@
 pub mod filter;
 pub mod group;
+pub mod having;
 pub mod limit;
 pub mod offset;
 pub mod r#where;
