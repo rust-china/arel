@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-
 ///
 /// # Examples Trait ArelBase
 ///
@@ -70,6 +69,12 @@ pub trait ArelBase {
     {
         None
     }
+    fn query() -> crate::manager::SelectManager<Self>
+    where
+        Self: Sized,
+    {
+        crate::manager::SelectManager::<Self>::default()
+    }
     fn validates(&self) -> anyhow::Result<()> {
         Ok(())
     }
@@ -108,6 +113,9 @@ mod tests {
     #[test]
     fn it_works() {
         let user = User::default();
+        let query = User::query().to_sql().to_sql_string();
+        assert_eq!(query.unwrap(), r#"SELECT "user".* FROM "user""#);
+
         let users: Vec<&dyn ArelModel> = vec![&user];
         // keep trait safe
         for user in users {

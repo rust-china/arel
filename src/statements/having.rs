@@ -4,6 +4,7 @@ use crate::{
 };
 use std::ops::{Deref, DerefMut};
 
+#[derive(Debug)]
 pub struct Having<M: ArelBase>(Filter<M>);
 
 impl<M: ArelBase> ArelStatement for Having<M> {

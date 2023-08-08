@@ -1,5 +1,6 @@
 use crate::statements::ArelStatement;
 
+#[derive(Debug)]
 pub struct Lock {
     value: String,
 }
@@ -11,8 +12,8 @@ impl ArelStatement for Lock {
 }
 
 impl Lock {
-    pub fn new<T: ToString>(raw: T) -> Self {
-        Self { value: raw.to_string() }
+    pub fn new() -> Self {
+        Self { value: "FOR UPDATE".to_string() }
     }
 }
 
@@ -26,7 +27,7 @@ mod tests {
         struct User {}
         impl ArelBase for User {}
 
-        let lock = Lock::new("FOR UPDATE");
+        let lock = Lock::new();
         assert_eq!(lock.to_sql().unwrap().to_sql_string().unwrap(), "FOR UPDATE");
     }
 }

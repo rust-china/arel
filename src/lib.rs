@@ -1,6 +1,4 @@
-pub static DESC: &str = "DESC";
-pub static ASC: &str = "ASC";
-
+pub mod manager;
 pub mod prelude;
 pub mod sql;
 pub mod statements;
@@ -9,58 +7,37 @@ pub mod value;
 
 pub use bytes::Bytes;
 pub use sql::Sql;
-pub use value::Value;
+pub use value::{ActiveValue, Value};
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum ActiveValue<V>
-where
-    V: Into<Value> + Clone,
-{
-    Changed(V, Option<Box<ActiveValue<V>>>),
-    Unchanged(V),
-    NotSet,
+pub enum SortType {
+    Asc,
+    Desc,
+}
+impl std::fmt::Display for SortType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            SortType::Asc => write!(f, "ASC"),
+            SortType::Desc => write!(f, "DESC"),
+        }
+    }
 }
 
-impl<V> ActiveValue<V>
-where
-    V: Into<Value> + Clone,
-{
-    /// # Examples
-    ///
-    /// ```
-    /// use arel::prelude::*;
-    /// let active_value = ActiveValue::set(1);
-    /// assert_eq!(active_value, ActiveValue::Changed(1, None));
-    ///
-    /// ```
-    pub fn set(v: V) -> Self {
-        Self::Changed(v, None)
-    }
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use arel::prelude::*;
-    /// let mut not_set = ActiveValue::NotSet;
-    /// assert_eq!(not_set.change(1), &ActiveValue::Changed(1, Some(Box::new(ActiveValue::NotSet))));
-    ///
-    /// let mut unchanged = ActiveValue::Unchanged(false);
-    /// let old_value = unchanged.clone();
-    /// assert_eq!(unchanged.change(true), &ActiveValue::Changed(true, Some(Box::new(old_value))));
-    ///
-    /// let mut changed = ActiveValue::Changed(1, Some(Box::new(ActiveValue::NotSet)));
-    /// assert_eq!(changed.change(1), &ActiveValue::Changed(1, Some(Box::new(ActiveValue::NotSet))));
-    /// assert_eq!(changed.change(2), &ActiveValue::Changed(2, Some(Box::new(ActiveValue::NotSet))));
-    /// ```
-    pub fn change(&mut self, v: V) -> &mut Self {
+pub enum JoinType {
+    LeftJoin,
+    InnerJoin,
+    RightJoin,
+    FullOuterJoin,
+    CrossJoin,
+}
+impl std::fmt::Display for JoinType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Self::Changed(_, ov) => {
-                *self = ActiveValue::Changed(v, ov.clone());
-            }
-            Self::Unchanged(ov) => *self = ActiveValue::Changed(v, Some(Box::new(Self::Unchanged(ov.clone())))),
-            Self::NotSet => *self = ActiveValue::Changed(v, Some(Box::new(Self::NotSet))),
+            JoinType::LeftJoin => write!(f, "LEFT JOIN"),
+            JoinType::InnerJoin => write!(f, "INNER JOIN"),
+            JoinType::RightJoin => write!(f, "RIGHT JOIN"),
+            JoinType::FullOuterJoin => write!(f, "FULL OUTER JOIN"),
+            JoinType::CrossJoin => write!(f, "CROSS JOIN"),
         }
-        self
     }
 }
 

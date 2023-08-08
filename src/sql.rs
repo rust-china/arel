@@ -159,8 +159,8 @@ impl Sql {
                         let use_replace_value = prepare_values.get(replace_idx).ok_or_else(|| anyhow::anyhow!("参数不足"))?;
                         replace_idx += 1;
                         match use_replace_value {
-                            crate::Value::Bytes(Some(bytes)) => Ok(format!(r#"b"{}""#, bytes.escape_ascii().to_string())),
-                            _ => Ok(use_replace_value.to_sql().value),
+                            crate::Value::Bytes(Some(bytes)) => Ok(format!(r#"?b"{}""#, bytes.escape_ascii().to_string())),
+                            _ => Ok(format!("?{}", use_replace_value.to_sql().value)),
                         }
                     }
                     _ => Ok(char.to_string()),
@@ -201,6 +201,6 @@ mod tests {
             r#"* from users where users.id = ? and name = ?"#,
             vec![Into::<crate::Value>::into(1), Into::<crate::Value>::into("sanmu")],
         );
-        assert_eq!(&sql.to_sql_string().unwrap(), r#"select * from users where users.id = 1 and name = "sanmu""#);
+        assert_eq!(&sql.to_sql_string().unwrap(), r#"select * from users where users.id = ?1 and name = ?"sanmu""#);
     }
 }

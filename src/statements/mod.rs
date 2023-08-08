@@ -1,10 +1,12 @@
 pub mod filter;
 pub mod group;
 pub mod having;
+pub mod join;
 pub mod limit;
 pub mod lock;
 pub mod offset;
 pub mod order;
+pub mod select;
 pub mod r#where;
 
 pub trait ArelStatement {

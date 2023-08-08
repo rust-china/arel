@@ -1,3 +1,6 @@
+mod active_value;
+
+pub use active_value::ActiveValue;
 use std::borrow::Cow;
 
 pub trait Nullable {
@@ -191,7 +194,7 @@ impl Value {
     /// assert_eq!(value.to_sql().to_sql_string().unwrap(), "0.1");
     ///
     /// let value: Value = bytes::Bytes::from_static(b"hello").into();
-    /// assert_eq!(value.to_sql().to_sql_string().unwrap(), r#"b"hello""#);
+    /// assert_eq!(value.to_sql().to_sql_string().unwrap(), r#"?b"hello""#);
     ///
     /// let value: Value = vec![1, 2, 3].into();
     /// assert_eq!(value.to_sql().to_sql_string().unwrap(), "(1,2,3)");

@@ -3,12 +3,12 @@ pub mod filter_or;
 
 pub use filter_and::FilterAnd;
 pub use filter_or::FilterOr;
-use std::marker::PhantomData;
+use std::{fmt::Debug, marker::PhantomData};
 
 use super::ArelStatement;
 use crate::prelude::ArelBase;
 
-pub(crate) trait ArelSubFilterStatement {
+pub(crate) trait ArelSubFilterStatement: Debug {
     fn sqls(&self) -> Option<&Vec<crate::Sql>>;
     fn sqls_mut(&mut self) -> Option<&mut Vec<crate::Sql>>;
     fn join_str(&self) -> &'static str;
@@ -38,9 +38,10 @@ pub(crate) trait ArelSubFilterStatement {
     }
 }
 
+#[derive(Debug)]
 pub struct Filter<M: ArelBase> {
     sub_filters: Vec<Box<dyn ArelSubFilterStatement>>,
-    _mark: PhantomData<M>,
+    _marker: PhantomData<M>,
 }
 
 impl<T: ArelBase> ArelStatement for Filter<T> {
@@ -69,7 +70,7 @@ impl<M: ArelBase> Filter<M> {
     pub fn new() -> Self {
         Self {
             sub_filters: vec![],
-            _mark: PhantomData::<M>,
+            _marker: PhantomData::<M>,
         }
     }
     /// # Examples
@@ -315,33 +316,36 @@ mod tests {
 
         let mut filter_and = FilterAnd::default();
         filter_and.sqls.push(crate::Sql::new_with_prepares("name = ?", vec!["sanmu"]));
-        assert_eq!(filter_and.to_sql().unwrap().to_sql_string().unwrap(), r#"name = "sanmu""#);
+        assert_eq!(filter_and.to_sql().unwrap().to_sql_string().unwrap(), r#"name = ?"sanmu""#);
         filter_and.sqls.push(crate::Sql::new_with_prepares("age = ?", vec![18]));
-        assert_eq!(filter_and.to_sql().unwrap().to_sql_string().unwrap(), r#"name = "sanmu" AND age = 18"#);
+        assert_eq!(filter_and.to_sql().unwrap().to_sql_string().unwrap(), r#"name = ?"sanmu" AND age = ?18"#);
         filter.sub_filters.push(Box::new(filter_and));
         assert!(filter.to_sql().is_some());
-        assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"(name = "sanmu" AND age = 18)"#);
+        assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"(name = ?"sanmu" AND age = ?18)"#);
 
         let mut filter_or = FilterOr::default();
         filter_or.sqls.push(crate::Sql::new_with_prepares("name = ?", vec!["sanmu"]));
-        assert_eq!(filter_or.to_sql().unwrap().to_sql_string().unwrap(), r#"name = "sanmu""#);
+        assert_eq!(filter_or.to_sql().unwrap().to_sql_string().unwrap(), r#"name = ?"sanmu""#);
         filter_or.sqls.push(crate::Sql::new_with_prepares("age = ?", vec![18]));
-        assert_eq!(filter_or.to_sql().unwrap().to_sql_string().unwrap(), r#"name = "sanmu" OR age = 18"#);
+        assert_eq!(filter_or.to_sql().unwrap().to_sql_string().unwrap(), r#"name = ?"sanmu" OR age = ?18"#);
         filter.sub_filters.push(Box::new(filter_or));
         assert!(filter.to_sql().is_some());
-        assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"(name = "sanmu" AND age = 18) OR (name = "sanmu" OR age = 18)"#);
+        assert_eq!(
+            filter.to_sql().unwrap().to_sql_string().unwrap(),
+            r#"(name = ?"sanmu" AND age = ?18) OR (name = ?"sanmu" OR age = ?18)"#
+        );
 
         // bytes
         let mut filter_and = FilterAnd::default();
         let bytes_value: crate::Value = bytes::Bytes::from_static(b"hello").into();
         filter_and.sqls.push(crate::Sql::new_with_prepares("bytes = ?", vec![bytes_value]));
-        assert_eq!(filter_and.to_sql().unwrap().to_sql_string().unwrap(), r#"bytes = b"hello""#);
+        assert_eq!(filter_and.to_sql().unwrap().to_sql_string().unwrap(), r#"bytes = ?b"hello""#);
 
         // array
         let mut filter_and = FilterAnd::default();
         let bytes: Vec<crate::Value> = vec![18.into(), 19.into(), 20.into()];
         let bytes_value: crate::Value = bytes.into();
         filter_and.sqls.push(crate::Sql::new_with_prepares("age IN ?", vec![bytes_value]));
-        assert_eq!(filter_and.to_sql().unwrap().to_sql_string().unwrap(), r#"age IN (18,19,20)"#);
+        assert_eq!(filter_and.to_sql().unwrap().to_sql_string().unwrap(), r#"age IN ?(18,19,20)"#);
     }
 }

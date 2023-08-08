@@ -1,20 +1,21 @@
 use crate::statements::ArelStatement;
 
+#[derive(Debug)]
 pub struct Limit {
-    value: usize,
+    num: usize,
 }
 
 impl ArelStatement for Limit {
     fn to_sql(&self) -> Option<crate::Sql> {
         let mut final_sql = crate::Sql::new("LIMIT ");
-        final_sql.push_str(self.value.to_string());
+        final_sql.push_str(self.num.to_string());
         Some(final_sql)
     }
 }
 
 impl Limit {
-    pub fn new(value: usize) -> Self {
-        Self { value }
+    pub fn new(num: usize) -> Self {
+        Self { num }
     }
 }
 

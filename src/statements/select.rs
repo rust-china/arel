@@ -2,12 +2,12 @@ use crate::{prelude::ArelBase, statements::ArelStatement};
 use std::marker::PhantomData;
 
 #[derive(Debug)]
-pub struct Group<M: ArelBase> {
+pub struct Select<M: ArelBase> {
     sqls: Vec<crate::Sql>,
     _marker: PhantomData<M>,
 }
 
-impl<M: ArelBase> ArelStatement for Group<M> {
+impl<M: ArelBase> ArelStatement for Select<M> {
     fn sqls(&self) -> Option<&Vec<crate::Sql>> {
         if self.sqls.len() > 0 {
             Some(&self.sqls)
@@ -17,7 +17,7 @@ impl<M: ArelBase> ArelStatement for Group<M> {
     }
     fn to_sql(&self) -> Option<crate::Sql> {
         if let Some(sqls) = self.sqls() {
-            let mut final_sql = crate::Sql::new("GROUP BY ");
+            let mut final_sql = crate::Sql::new("SELECT ");
             for (idx, sql) in sqls.iter().enumerate() {
                 if idx >= 1 {
                     final_sql.push_str(", ");
@@ -31,16 +31,16 @@ impl<M: ArelBase> ArelStatement for Group<M> {
     }
 }
 
-impl<M: ArelBase> Group<M> {
+impl<M: ArelBase> Select<M> {
     /// # Examples
     ///
     /// ```
     /// use arel::prelude::*;
-    /// use arel::statements::group::Group;
+    /// use arel::statements::select::Select;
     /// struct User {}
     /// impl ArelBase for User {}
-    /// let group = Group::<User>::new(vec!["name", "age"]);
-    /// assert_eq!(group.to_sql().unwrap().to_sql_string().unwrap(), r#"GROUP BY "user"."name", "user"."age""#);
+    /// let select = Select::<User>::new(vec!["name", "age"]);
+    /// assert_eq!(select.to_sql().unwrap().to_sql_string().unwrap(), r#"SELECT "user"."name", "user"."age""#);
     ///
     /// ```
     pub fn new<T: AsRef<str>>(columns: Vec<T>) -> Self {
@@ -60,11 +60,11 @@ impl<M: ArelBase> Group<M> {
     ///
     /// ```
     /// use arel::prelude::*;
-    /// use arel::statements::group::Group;
+    /// use arel::statements::select::Select;
     /// struct User {}
     /// impl ArelBase for User {}
-    /// let group = Group::<User>::new_sqls(vec!["name", "age"]);
-    /// assert_eq!(group.to_sql().unwrap().to_sql_string().unwrap(), r#"GROUP BY name, age"#);
+    /// let select = Select::<User>::new_sqls(vec!["name", "age"]);
+    /// assert_eq!(select.to_sql().unwrap().to_sql_string().unwrap(), r#"SELECT name, age"#);
     ///
     /// ```
     pub fn new_sqls<S: Into<crate::Sql>>(sqls: Vec<S>) -> Self {
@@ -74,17 +74,3 @@ impl<M: ArelBase> Group<M> {
         }
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use crate::prelude::ArelBase;
-
-//     #[test]
-//     fn to_sql() {
-//         struct User {}
-//         impl ArelBase for User {}
-
-//         // let group = Group::<User>::new("name");
-//         // assert_eq!(group.to_sql().unwrap().to_sql_string().unwrap(), r#"GROUP BY "user"."name""#);
-//     }
-// }
