@@ -4,6 +4,8 @@ pub mod sql;
 pub mod statements;
 pub mod traits;
 pub mod value;
+#[cfg(any(feature = "sqlite", feature = "mysql", feature = "postgres"))]
+pub mod visitor;
 
 pub use bytes::Bytes;
 pub use sql::Sql;

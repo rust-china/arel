@@ -79,7 +79,7 @@ pub trait ArelBase {
         Ok(())
     }
     fn to_sql(&self) {
-        println!("todo");
+        ()
     }
 }
 
@@ -87,7 +87,7 @@ pub trait ArelBase {
 ///
 /// ```
 /// use arel::prelude::*;
-///#[derive(Debug, Default)]
+///#[derive(Debug, Default, sqlx::FromRow)]
 /// struct User {
 ///     id: i64,
 /// }
@@ -95,10 +95,24 @@ pub trait ArelBase {
 /// impl ArelRecord for User {}
 /// let user = User::default();
 /// assert!(user.validates().is_ok());
-pub trait ArelRecord: ArelBase {}
-
-/// # Examples Trait ArelModel
-pub trait ArelModel: ArelRecord {}
+#[cfg(feature = "sqlite")]
+pub trait ArelRecord: ArelBase + sqlx::FromRow<'static, sqlx::sqlite::SqliteRow>
+where
+    Self: Sized,
+{
+}
+#[cfg(feature = "mysql")]
+pub trait ArelRecord: ArelBase + sqlx::FromRow<'static, sqlx::mysql::MysqlRow>
+where
+    Self: Sized,
+{
+}
+#[cfg(feature = "postgres")]
+pub trait ArelRecord: ArelBase + sqlx::FromRow<'static, sqlx::postgres::PostgresRow>
+where
+    Self: Sized,
+{
+}
 
 #[cfg(test)]
 mod tests {
@@ -107,16 +121,14 @@ mod tests {
     #[derive(Default)]
     struct User {}
     impl ArelBase for User {}
-    impl ArelRecord for User {}
-    impl ArelModel for User {}
 
     #[test]
     fn it_works() {
-        let user = User::default();
         let query = User::query().to_sql().to_sql_string();
         assert_eq!(query.unwrap(), r#"SELECT "user".* FROM "user""#);
 
-        let users: Vec<&dyn ArelModel> = vec![&user];
+        let user = User::default();
+        let users: Vec<&dyn ArelBase> = vec![&user];
         // keep trait safe
         for user in users {
             user.to_sql();

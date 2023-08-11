@@ -7,7 +7,7 @@ pub trait Nullable {
     fn null() -> Value;
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Value {
     Bool(Option<bool>),
     TinyInt(Option<i8>),
@@ -241,7 +241,7 @@ impl Value {
             },
             Value::SmallUnsigned(val) => match val {
                 Some(v) => crate::Sql::new(format!("{}", v)),
-                None => crate::Sql::new("null"),
+                None => crate::Sql::new("NULL"),
             },
             Value::Unsigned(val) => match val {
                 Some(v) => crate::Sql::new(format!("{}", v)),
@@ -249,7 +249,7 @@ impl Value {
             },
             Value::BigUnsigned(val) => match val {
                 Some(v) => crate::Sql::new(format!("{}", v)),
-                None => crate::Sql::new("null"),
+                None => crate::Sql::new("NULL"),
             },
             Value::Float(val) => match val {
                 Some(v) => crate::Sql::new(format!("{}", v)),
@@ -269,14 +269,14 @@ impl Value {
             },
             Value::Bytes(val) => match val {
                 Some(v) => crate::Sql::new_with_prepare("?", bytes::Bytes::copy_from_slice(v)),
-                None => crate::Sql::new("null"),
+                None => crate::Sql::new("NULL"),
             },
             Value::Array(val) => match val {
                 Some(vec) => {
                     let vec: Vec<String> = vec.iter().map(|v| v.to_sql().value).collect();
                     crate::Sql::new(format!("({})", vec.join(",")))
                 }
-                None => crate::Sql::new("null"),
+                None => crate::Sql::new("NULL"),
             },
             Value::Json(val) => match val {
                 Some(v) => crate::Sql::new(serde_json::to_string(v).unwrap()),

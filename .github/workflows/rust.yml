@@ -21,7 +21,7 @@ jobs:
       run: cargo build --features sqlite --verbose
     
     - name: Run tests with sqlite features
-      run: cargo test --features sqlite --verbose -- --skip sqlite_sqlx
+      run: cargo test --features sqlite --verbose
 
     - name: Run tests with mysql features
       run: cargo test --features mysql --verbose

@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 
 #[derive(Debug)]
 pub struct SelectManager<M: ArelBase> {
-    select: Option<crate::statements::select::Select<M>>,
+    select: crate::statements::select::Select<M>,
     join: Option<crate::statements::join::Join<M>>,
     r#where: Option<crate::statements::r#where::Where<M>>,
     group: Option<crate::statements::group::Group<M>>,
@@ -18,7 +18,7 @@ pub struct SelectManager<M: ArelBase> {
 impl<M: ArelBase> Default for SelectManager<M> {
     fn default() -> Self {
         Self {
-            select: None,
+            select: crate::statements::select::Select::<M>::default(),
             join: None,
             r#where: None,
             group: None,
@@ -49,7 +49,7 @@ impl<M: ArelBase> SelectManager<M> {
     /// ```
     pub fn select<T: AsRef<str>>(&mut self, columns: Vec<T>) -> &mut Self {
         let select = crate::statements::select::Select::<M>::new(columns);
-        self.select = Some(select);
+        self.select = select;
         self
     }
     /// # Examples
@@ -66,7 +66,23 @@ impl<M: ArelBase> SelectManager<M> {
     /// ```
     pub fn select_sql<S: Into<crate::Sql>>(&mut self, sql: S) -> &mut Self {
         let select = crate::statements::select::Select::<M>::new_sql(sql);
-        self.select = Some(select);
+        self.select = select;
+        self
+    }
+    /// # Examples
+    ///
+    /// ```
+    /// use arel::prelude::*;
+    /// use arel::manager::SelectManager;
+    /// struct User {}
+    /// impl ArelBase for User {}
+    /// let mut select_manager = SelectManager::<User>::default();
+    /// select_manager.distinct();
+    /// assert_eq!(select_manager.to_sql().to_sql_string().unwrap(), r#"SELECT DISTINCT "user".* FROM "user""#);
+    ///
+    /// ```
+    pub fn distinct(&mut self) -> &mut Self {
+        self.select.distinct();
         self
     }
     /// # Examples
@@ -229,6 +245,11 @@ impl<M: ArelBase> SelectManager<M> {
         self.offset = Some(offset);
         self
     }
+    pub fn paginate(&mut self, page: usize, page_size: usize) -> &mut Self {
+        let offset = (std::cmp::max(page, 1) - 1) * page_size;
+        self.limit(page_size);
+        self.offset(offset)
+    }
     pub fn lock(&mut self) -> &mut Self {
         let lock = crate::statements::lock::Lock::new();
         self.lock = Some(lock);
@@ -238,13 +259,11 @@ impl<M: ArelBase> SelectManager<M> {
         let table_name = M::table_name();
         let mut final_sql = crate::Sql::new("");
 
-        let mut select_sql = crate::Sql::new(format!(r#"SELECT "{}".*"#, table_name));
-        if let Some(select) = &self.select {
-            if let Some(sql) = select.to_sql() {
-                select_sql = sql;
-            }
+        let mut select_sql = crate::Sql::new(format!(r#"SELECT "{}".* FROM "{}""#, table_name, table_name));
+        if let Some(sql) = self.select.to_sql() {
+            select_sql = sql;
         }
-        final_sql.push_sql(select_sql).push_str(format!(r#" FROM "{}""#, table_name));
+        final_sql.push_sql(select_sql);
 
         if let Some(join) = &self.join {
             if let Some(sql) = join.to_sql() {
