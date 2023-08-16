@@ -69,11 +69,12 @@ pub trait ArelBase {
     {
         None
     }
-    fn query() -> crate::manager::SelectManager<Self>
+    #[cfg(any(feature = "sqlite", feature = "mysql", feature = "postgres"))]
+    fn visitor() -> anyhow::Result<&'static crate::visitor::Visitor>
     where
         Self: Sized,
     {
-        crate::manager::SelectManager::<Self>::default()
+        crate::visitor::get()
     }
     fn validates(&self) -> anyhow::Result<()> {
         Ok(())
@@ -95,32 +96,25 @@ pub trait ArelBase {
 /// impl ArelRecord for User {}
 /// let user = User::default();
 /// assert!(user.validates().is_ok());
-#[cfg(feature = "sqlite")]
-pub trait ArelRecord: ArelBase + sqlx::FromRow<'static, sqlx::sqlite::SqliteRow>
-where
-    Self: Sized,
-{
-}
-#[cfg(feature = "mysql")]
-pub trait ArelRecord: ArelBase + sqlx::FromRow<'static, sqlx::mysql::MysqlRow>
-where
-    Self: Sized,
-{
-}
-#[cfg(feature = "postgres")]
-pub trait ArelRecord: ArelBase + sqlx::FromRow<'static, sqlx::postgres::PostgresRow>
-where
-    Self: Sized,
-{
+pub trait ArelRecord: ArelBase {}
+pub trait ArelModel: ArelRecord {
+    fn query() -> crate::manager::SelectManager<Self>
+    where
+        Self: Sized,
+    {
+        crate::manager::SelectManager::<Self>::default()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[derive(Default)]
+    #[derive(Default, sqlx::FromRow)]
     struct User {}
     impl ArelBase for User {}
+    impl ArelRecord for User {}
+    impl ArelModel for User {}
 
     #[test]
     fn it_works() {

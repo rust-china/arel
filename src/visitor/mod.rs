@@ -1,22 +1,21 @@
 use once_cell::sync::OnceCell;
-use sqlx::AnyPool;
 use std::future::Future;
 use std::ops::Deref;
 use std::pin::Pin;
 
 #[derive(Debug)]
-pub struct Visitor(AnyPool);
+pub struct Visitor(crate::DatabasePool);
 impl Deref for Visitor {
-    type Target = AnyPool;
+    type Target = crate::DatabasePool;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 impl Visitor {
-    pub fn new(pool: AnyPool) -> Self {
+    pub fn new(pool: crate::DatabasePool) -> Self {
         Self(pool)
     }
-    pub fn pool(&self) -> &AnyPool {
+    pub fn pool(&self) -> &crate::DatabasePool {
         &self.0
     }
 }
@@ -36,15 +35,15 @@ pub async fn init() -> anyhow::Result<&'static Visitor> {
     };
     get_or_init(|| {
         Box::pin(async move {
-            sqlx::any::install_default_drivers();
-            sqlx::any::AnyPoolOptions::new().max_connections(database_max_connection).connect(database_url.trim()).await
+            // sqlx::sqlite::install_default_drivers();
+            crate::DatabasePoolOptions::new().max_connections(database_max_connection).connect(database_url.trim()).await
         })
     })
     .await
 }
 pub async fn get_or_init<F>(callback: F) -> anyhow::Result<&'static Visitor>
 where
-    F: FnOnce() -> Pin<Box<dyn Future<Output = Result<AnyPool, sqlx::Error>>>>,
+    F: FnOnce() -> Pin<Box<dyn Future<Output = Result<crate::DatabasePool, sqlx::Error>>>>,
 {
     if VISITOR.get().is_none() {
         let pool = callback().await?;
@@ -65,6 +64,7 @@ pub fn get() -> anyhow::Result<&'static Visitor> {
 }
 
 #[cfg(test)]
+#[cfg(feature = "sqlite")]
 mod tests {
     use super::*;
     #[tokio::test]

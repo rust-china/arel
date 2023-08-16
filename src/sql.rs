@@ -156,11 +156,11 @@ impl Sql {
                 .chars()
                 .map(|char| match char {
                     '?' => {
-                        let use_replace_value = prepare_values.get(replace_idx).ok_or_else(|| anyhow::anyhow!("参数不足"))?;
+                        let prepare_value = prepare_values.get(replace_idx).ok_or_else(|| anyhow::anyhow!("参数不足"))?;
                         replace_idx += 1;
-                        match use_replace_value {
+                        match prepare_value {
                             crate::Value::Bytes(Some(bytes)) => Ok(format!(r#"?b"{}""#, bytes.escape_ascii().to_string())),
-                            _ => Ok(format!("?{}", use_replace_value.to_sql().value)),
+                            _ => Ok(format!("?{}", prepare_value.to_sql().value)),
                         }
                     }
                     _ => Ok(char.to_string()),
@@ -173,6 +173,75 @@ impl Sql {
             }
         } else {
             Ok(self.value.clone())
+        }
+    }
+}
+
+#[cfg(any(feature = "sqlite", feature = "mysql", feature = "postgres"))]
+impl Sql {
+    pub fn to_query_builder<'a>(&self) -> anyhow::Result<sqlx::QueryBuilder<'a, crate::Database>> {
+        let mut query_builder = sqlx::QueryBuilder::new("");
+        if let Some(prepare_values) = &self.prepare_values {
+            let mut prepare_idx = 0;
+            for (_, ch) in self.value.chars().into_iter().enumerate() {
+                match ch {
+                    '?' => {
+                        let prepare_value = prepare_values.get(prepare_idx).ok_or_else(|| anyhow::anyhow!("参数不足"))?;
+                        prepare_idx += 1;
+                        query_builder.push_bind(serde_json::json!(prepare_value));
+                    }
+                    other => {
+                        query_builder.push(other);
+                    }
+                }
+            }
+        }
+        Ok(query_builder)
+    }
+    pub(crate) async fn fetch_one_exec<'a, E>(&self, executor: E) -> anyhow::Result<crate::DatabaseRow>
+    where
+        E: sqlx::Executor<'a, Database = crate::Database>,
+    {
+        let mut query_builder = self.to_query_builder()?;
+        let query = query_builder.build();
+        match query.fetch_one(executor).await {
+            Ok(val) => Ok(val),
+            Err(err) => Err(anyhow::anyhow!(err.to_string())),
+        }
+    }
+    pub(crate) async fn fetch_one_exec_as<'a, T, E>(&self, executor: E) -> anyhow::Result<T>
+    where
+        for<'b> T: Send + Unpin + sqlx::FromRow<'b, crate::DatabaseRow>,
+        E: sqlx::Executor<'a, Database = crate::Database>,
+    {
+        let mut query_builder = self.to_query_builder()?;
+        let query_as = query_builder.build_query_as::<T>();
+        match query_as.fetch_one(executor).await {
+            Ok(val) => Ok(val),
+            Err(err) => Err(anyhow::anyhow!(err.to_string())),
+        }
+    }
+    pub(crate) async fn fetch_all_exec<'a, E>(&self, executor: E) -> anyhow::Result<Vec<crate::DatabaseRow>>
+    where
+        E: sqlx::Executor<'a, Database = crate::Database>,
+    {
+        let mut query_builder = self.to_query_builder()?;
+        let query = query_builder.build();
+        match query.fetch_all(executor).await {
+            Ok(val) => Ok(val),
+            Err(err) => Err(anyhow::anyhow!(err.to_string())),
+        }
+    }
+    pub(crate) async fn fetch_all_exec_as<'a, T, E>(&self, executor: E) -> anyhow::Result<Vec<T>>
+    where
+        for<'b> T: Send + Unpin + sqlx::FromRow<'b, crate::DatabaseRow>,
+        E: sqlx::Executor<'a, Database = crate::Database>,
+    {
+        let mut query_builder = self.to_query_builder()?;
+        let query_as = query_builder.build_query_as::<T>();
+        match query_as.fetch_all(executor).await {
+            Ok(val) => Ok(val),
+            Err(err) => Err(anyhow::anyhow!(err.to_string())),
         }
     }
 }

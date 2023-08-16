@@ -7,9 +7,37 @@ pub mod value;
 #[cfg(any(feature = "sqlite", feature = "mysql", feature = "postgres"))]
 pub mod visitor;
 
+pub use crate::traits::{ArelBase, ArelModel, ArelRecord};
 pub use bytes::Bytes;
 pub use sql::Sql;
 pub use value::{ActiveValue, Value};
+
+#[cfg(feature = "sqlite")]
+pub type Database = sqlx::sqlite::Sqlite;
+#[cfg(feature = "sqlite")]
+pub type DatabasePool = sqlx::sqlite::SqlitePool;
+#[cfg(feature = "sqlite")]
+pub type DatabaseRow = sqlx::sqlite::SqliteRow;
+#[cfg(feature = "sqlite")]
+pub type DatabasePoolOptions = sqlx::sqlite::SqlitePoolOptions;
+
+#[cfg(feature = "mysql")]
+pub type Database = sqlx::mysql::MySql;
+#[cfg(feature = "mysql")]
+pub type DatabasePool = sqlx::mysql::MySqlPool;
+#[cfg(feature = "mysql")]
+pub type DatabaseRow = sqlx::mysql::MySqlRow;
+#[cfg(feature = "mysql")]
+pub type DatabasePoolOptions = sqlx::mysql::MySqlPoolOptions;
+
+#[cfg(feature = "postgres")]
+pub type Database = sqlx::Postgres;
+#[cfg(feature = "postgres")]
+pub type DatabasePool = sqlx::PgPool;
+#[cfg(feature = "postgres")]
+pub type DatabaseRow = sqlx::postgres::PgRow;
+#[cfg(feature = "postgres")]
+pub type DatabasePoolOptions = sqlx::postgres::PgPoolOptions;
 
 pub enum SortType {
     Asc,
