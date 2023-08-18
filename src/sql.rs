@@ -150,27 +150,56 @@ impl Sql {
     }
     pub fn to_sql_string(&self) -> anyhow::Result<String> {
         if let Some(prepare_values) = &self.prepare_values {
-            let mut replace_idx = 0;
-            let raw_sql = self
-                .value
-                .chars()
-                .map(|char| match char {
+            let mut prepare_idx = 0;
+
+            let mut raw_sql = String::new();
+            let chars = self.value.chars().collect::<Vec<char>>();
+            let chars_len = chars.len();
+            let mut idx = 0;
+            while idx < chars_len {
+                let ch = chars[idx];
+                let mut next_idx = idx + 1;
+                let mut should_replace = false;
+                match ch {
                     '?' => {
-                        let prepare_value = prepare_values.get(replace_idx).ok_or_else(|| anyhow::anyhow!("参数不足"))?;
-                        replace_idx += 1;
-                        match prepare_value {
-                            crate::Value::Bytes(Some(bytes)) => Ok(format!(r#"?b"{}""#, bytes.escape_ascii().to_string())),
-                            _ => Ok(format!("?{}", prepare_value.to_sql().value)),
+                        should_replace = true;
+                    }
+                    '$' => {
+                        let mut prepare_end_idx = idx;
+                        while prepare_end_idx < chars_len {
+                            match chars[prepare_end_idx + 1] {
+                                '0'..='9' => {
+                                    prepare_end_idx += 1;
+                                }
+                                _ => break,
+                            }
+                        }
+                        if prepare_end_idx > idx {
+                            should_replace = true;
+                            next_idx = prepare_end_idx + 1;
                         }
                     }
-                    _ => Ok(char.to_string()),
-                })
-                .collect::<anyhow::Result<String>>()?;
-            if replace_idx == prepare_values.len() {
-                Ok(raw_sql)
-            } else {
-                Err(anyhow::anyhow!("prepare sql params count not match: {}", raw_sql))
+                    _ => (),
+                }
+
+                if should_replace {
+                    let prepare_value = prepare_values.get(prepare_idx).ok_or_else(|| anyhow::anyhow!("参数不足"))?;
+                    prepare_idx += 1;
+                    match prepare_value {
+                        crate::Value::Bytes(Some(bytes)) => {
+                            raw_sql.push_str(&format!(r#"?b"{}""#, bytes.escape_ascii().to_string()));
+                        }
+                        _ => {
+                            raw_sql.push_str(&format!("?{}", prepare_value.to_sql().value));
+                        }
+                    }
+                } else {
+                    raw_sql.push(ch);
+                }
+
+                idx = next_idx;
             }
+            Ok(raw_sql)
         } else {
             Ok(self.value.clone())
         }
@@ -183,18 +212,50 @@ impl Sql {
         let mut query_builder = sqlx::QueryBuilder::new("");
         if let Some(prepare_values) = &self.prepare_values {
             let mut prepare_idx = 0;
-            for (_, ch) in self.value.chars().into_iter().enumerate() {
+
+            let chars = self.value.chars().collect::<Vec<char>>();
+            let chars_len = chars.len();
+            let mut idx = 0;
+            while idx < chars_len {
+                let ch = chars[idx];
+                let mut next_idx = idx + 1;
+                let mut should_replace = false;
                 match ch {
                     '?' => {
-                        let prepare_value = prepare_values.get(prepare_idx).ok_or_else(|| anyhow::anyhow!("参数不足"))?;
-                        prepare_idx += 1;
-                        query_builder.push_bind(serde_json::json!(prepare_value));
+                        should_replace = true;
                     }
-                    other => {
+                    '$' => {
+                        let mut prepare_end_idx = idx;
+                        while prepare_end_idx < chars_len {
+                            match chars[prepare_end_idx + 1] {
+                                '0'..='9' => {
+                                    prepare_end_idx += 1;
+                                }
+                                _ => break,
+                            }
+                        }
+                        if prepare_end_idx > idx {
+                            should_replace = true;
+                            next_idx = prepare_end_idx + 1;
+                        } else {
+                            query_builder.push('$');
+                        }
+                    }
+                    other @ _ => {
                         query_builder.push(other);
                     }
                 }
+
+                if should_replace {
+                    let prepare_value = prepare_values.get(prepare_idx).ok_or_else(|| anyhow::anyhow!("参数不足"))?;
+                    prepare_idx += 1;
+                    query_builder.push_bind(serde_json::json!(prepare_value));
+                }
+
+                idx += next_idx;
             }
+        } else {
+            query_builder.push(&self.value);
         }
         Ok(query_builder)
     }

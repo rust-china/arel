@@ -1,3 +1,13 @@
+#[cfg(not(any(feature = "sqlite", feature = "mysql", feature = "postgres")))]
+compile_error!("`sqlite`, `mysql` or `postgres` should be enable one.");
+
+#[cfg(all(feature = "sqlite", feature = "mysql"))]
+compile_error!("feature `sqlite` and `mysql` shouldn't be enabled both.");
+#[cfg(all(feature = "sqlite", feature = "postgres"))]
+compile_error!("feature `sqlite` and `postgres` shouldn't be enabled both.");
+#[cfg(all(feature = "mysql", feature = "postgres"))]
+compile_error!("feature `mysql` and `postgres` shouldn't be enabled both.");
+
 pub mod manager;
 pub mod prelude;
 pub mod sql;
@@ -15,6 +25,8 @@ pub use value::{ActiveValue, Value};
 #[cfg(feature = "sqlite")]
 pub type Database = sqlx::sqlite::Sqlite;
 #[cfg(feature = "sqlite")]
+pub type DatabaseConnection = sqlx::sqlite::SqliteConnection;
+#[cfg(feature = "sqlite")]
 pub type DatabasePool = sqlx::sqlite::SqlitePool;
 #[cfg(feature = "sqlite")]
 pub type DatabaseRow = sqlx::sqlite::SqliteRow;
@@ -24,6 +36,8 @@ pub type DatabasePoolOptions = sqlx::sqlite::SqlitePoolOptions;
 #[cfg(feature = "mysql")]
 pub type Database = sqlx::mysql::MySql;
 #[cfg(feature = "mysql")]
+pub type DatabaseConnection = sqlx::mysql::MySqlConnection;
+#[cfg(feature = "mysql")]
 pub type DatabasePool = sqlx::mysql::MySqlPool;
 #[cfg(feature = "mysql")]
 pub type DatabaseRow = sqlx::mysql::MySqlRow;
@@ -32,6 +46,8 @@ pub type DatabasePoolOptions = sqlx::mysql::MySqlPoolOptions;
 
 #[cfg(feature = "postgres")]
 pub type Database = sqlx::Postgres;
+#[cfg(feature = "postgres")]
+pub type DatabaseConnection = sqlx::postgres::PgConnection;
 #[cfg(feature = "postgres")]
 pub type DatabasePool = sqlx::PgPool;
 #[cfg(feature = "postgres")]

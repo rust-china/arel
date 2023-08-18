@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use std::marker::PhantomData;
+use std::ops::RangeBounds;
 
 #[derive(Debug)]
 pub struct SelectManager<M: ArelModel> {
@@ -160,6 +161,12 @@ impl<M: ArelModel> SelectManager<M> {
             let mut r#where = crate::statements::r#where::Where::<M>::new();
             r#where.filter_and(key, value);
             self.r#where = Some(r#where);
+        }
+        self
+    }
+    pub fn where_range<K: AsRef<str>, V: ToString, R: RangeBounds<V>>(&mut self, key: K, range: R) -> &mut Self {
+        if let Some(sql) = crate::Sql::range_sql(key, range) {
+            self.where_sql(sql);
         }
         self
     }
@@ -340,37 +347,37 @@ impl<M: ArelModel> SelectManager<M> {
     pub fn to_query_builder<'a>(&self) -> anyhow::Result<sqlx::QueryBuilder<'a, crate::Database>> {
         self.to_sql().to_query_builder()
     }
-    pub(crate) async fn fetch_one(&self) -> anyhow::Result<crate::DatabaseRow> {
-        self.to_sql().fetch_one_exec(M::visitor()?.pool()).await
+    pub async fn fetch_one(&self) -> anyhow::Result<crate::DatabaseRow> {
+        self.to_sql().fetch_one_exec(M::pool()?).await
     }
-    pub(crate) async fn fetch_one_as<T>(&self) -> anyhow::Result<T>
+    pub async fn fetch_one_as<T>(&self) -> anyhow::Result<T>
     where
         for<'b> T: Send + Unpin + sqlx::FromRow<'b, crate::DatabaseRow>,
     {
-        self.to_sql().fetch_one_exec_as(M::visitor()?.pool()).await
+        self.to_sql().fetch_one_exec_as(M::pool()?).await
     }
-    pub(crate) async fn fetch_all(&self) -> anyhow::Result<Vec<crate::DatabaseRow>> {
-        self.to_sql().fetch_all_exec(M::visitor()?.pool()).await
+    pub async fn fetch_all(&self) -> anyhow::Result<Vec<crate::DatabaseRow>> {
+        self.to_sql().fetch_all_exec(M::pool()?).await
     }
-    pub(crate) async fn fetch_all_as<T>(&self) -> anyhow::Result<Vec<T>>
+    pub async fn fetch_all_as<T>(&self) -> anyhow::Result<Vec<T>>
     where
         for<'b> T: Send + Unpin + sqlx::FromRow<'b, crate::DatabaseRow>,
     {
-        self.to_sql().fetch_all_exec_as(M::visitor()?.pool()).await
+        self.to_sql().fetch_all_exec_as(M::pool()?).await
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[derive(sqlx::FromRow)]
+    struct User {}
+    impl ArelBase for User {}
+    impl ArelRecord for User {}
+    impl ArelModel for User {}
+
     #[test]
     fn to_sql() {
-        #[derive(sqlx::FromRow)]
-        struct User {}
-        impl ArelBase for User {}
-        impl ArelRecord for User {}
-        impl ArelModel for User {}
-
         let mut select_manager = SelectManager::<User>::default();
         select_manager.select(vec!["name", "age"]);
         assert_eq!(select_manager.to_sql().to_sql_string().unwrap(), r#"SELECT "user"."name", "user"."age" FROM "user""#);

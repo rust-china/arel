@@ -1,11 +1,13 @@
 [package]
-name = "arel_codegen"
+name = "arel-macros"
 version = "0.2.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-description = "arel codegen"
+description = "arel macros"
 authors = ["sanmu <hdy9515@dingtalk.com>"]
 
+[lib]
+proc-macro = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

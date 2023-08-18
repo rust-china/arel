@@ -137,36 +137,39 @@ impl<T: Into<Value>> From<Vec<T>> for Value {
         Value::Array(Some(Box::new(vals)))
     }
 }
-
+#[cfg(feature = "with-json")]
 impl From<&serde_json::Value> for Value {
     fn from(val: &serde_json::Value) -> Self {
         Value::Json(Some(Box::new(val.clone())))
     }
 }
-
+#[cfg(feature = "with-json")]
 impl From<serde_json::Value> for Value {
     fn from(val: serde_json::Value) -> Self {
         Value::Json(Some(Box::new(val)))
     }
 }
-
+#[cfg(feature = "with-chrono")]
 impl From<&chrono::DateTime<chrono::Utc>> for Value {
     fn from(val: &chrono::DateTime<chrono::Utc>) -> Self {
         let value = chrono::DateTime::<chrono::FixedOffset>::from(val.clone());
         Value::ChronoDateTime(Some(Box::new(value)))
     }
 }
+#[cfg(feature = "with-chrono")]
 impl From<chrono::DateTime<chrono::Utc>> for Value {
     fn from(val: chrono::DateTime<chrono::Utc>) -> Self {
         let value = chrono::DateTime::<chrono::FixedOffset>::from(val);
         Value::ChronoDateTime(Some(Box::new(value)))
     }
 }
+#[cfg(feature = "with-chrono")]
 impl From<&chrono::DateTime<chrono::FixedOffset>> for Value {
     fn from(val: &chrono::DateTime<chrono::FixedOffset>) -> Self {
         Value::ChronoDateTime(Some(Box::new(val.clone())))
     }
 }
+#[cfg(feature = "with-chrono")]
 impl From<chrono::DateTime<chrono::FixedOffset>> for Value {
     fn from(val: chrono::DateTime<chrono::FixedOffset>) -> Self {
         Value::ChronoDateTime(Some(Box::new(val)))
@@ -278,10 +281,12 @@ impl Value {
                 }
                 None => crate::Sql::new("NULL"),
             },
+            #[cfg(feature = "with-json")]
             Value::Json(val) => match val {
                 Some(v) => crate::Sql::new(serde_json::to_string(v).unwrap()),
                 None => crate::Sql::new("NULL"),
             },
+            #[cfg(feature = "with-chrono")]
             Value::ChronoDateTime(val) => match val {
                 Some(v) => crate::Sql::new(format!("{}", v)),
                 None => crate::Sql::new(String::from("NULL")),

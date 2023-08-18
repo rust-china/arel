@@ -1,4 +1,6 @@
 use std::borrow::Cow;
+use std::future::Future;
+use std::pin::Pin;
 ///
 /// # Examples Trait ArelBase
 ///
@@ -69,13 +71,6 @@ pub trait ArelBase {
     {
         None
     }
-    #[cfg(any(feature = "sqlite", feature = "mysql", feature = "postgres"))]
-    fn visitor() -> anyhow::Result<&'static crate::visitor::Visitor>
-    where
-        Self: Sized,
-    {
-        crate::visitor::get()
-    }
     fn validates(&self) -> anyhow::Result<()> {
         Ok(())
     }
@@ -97,12 +92,39 @@ pub trait ArelBase {
 /// let user = User::default();
 /// assert!(user.validates().is_ok());
 pub trait ArelRecord: ArelBase {}
+#[async_trait::async_trait]
 pub trait ArelModel: ArelRecord {
     fn query() -> crate::manager::SelectManager<Self>
     where
         Self: Sized,
     {
         crate::manager::SelectManager::<Self>::default()
+    }
+    #[cfg(any(feature = "sqlite", feature = "mysql", feature = "postgres"))]
+    fn pool() -> anyhow::Result<&'static sqlx::Pool<crate::Database>>
+    where
+        Self: Sized,
+    {
+        Ok(crate::visitor::get()?.pool())
+    }
+    #[cfg(any(feature = "sqlite", feature = "mysql", feature = "postgres"))]
+    async fn with_transaction<'a, F: Send>(callback: F) -> anyhow::Result<Option<Self>>
+    where
+        Self: Sized,
+        for<'c> F: FnOnce(&'c mut sqlx::Transaction<'a, crate::Database>) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<Self>>> + Send + 'c>>,
+    {
+        let pool = Self::pool()?;
+        let mut tx = pool.begin().await?;
+        match callback(&mut tx).await {
+            Ok(model) => match tx.commit().await {
+                Ok(_) => Ok(model),
+                Err(e) => Err(anyhow::anyhow!(e.to_string())),
+            },
+            Err(e) => {
+                tx.rollback().await?;
+                Err(e)
+            }
+        }
     }
 }
 
