@@ -1,6 +1,6 @@
 use arel::prelude::*;
 
-#[arel]
+#[arel(table_name = "user")]
 #[allow(dead_code)]
 struct User {
     id: i32,
