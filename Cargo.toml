@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "arel-macros", "arel-codegen"]
+members = [".", "arel-macros", "arel-codegen", "example"]
 
 [workspace.dependencies]
 log = "0.4"
@@ -20,13 +20,13 @@ version = "0.2.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "a sql orm base sqlx"
-authors = ["sanmu <hdy9515@dingtalk.com>"]
+authors = ["sanmu <578595193@qq.com>"]
 homepage = "https://github.com/rust-china/arel"
 categories = ["database"]
 keywords = ["async", "orm", "sqlite", "mysql", "postgres"]
 
 [features]
-default = ["with-json", "with-chrono"]
+default = ["with-json", "with-chrono", "arel-macros"]
 sqlite = ["sqlx/sqlite"]
 mysql = ["sqlx/mysql"]
 postgres = ["sqlx/postgres"]
@@ -58,6 +58,7 @@ bytes = { workspace = true }
 serde_json = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true }
 
-
 uuid = { workspace = true, optional = true }
 sqlx = { version = "0.7" }
+
+arel-macros = { path = "./arel-macros", optional = true }

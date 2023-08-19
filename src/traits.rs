@@ -91,9 +91,8 @@ pub trait ArelBase {
 /// impl ArelRecord for User {}
 /// let user = User::default();
 /// assert!(user.validates().is_ok());
-pub trait ArelRecord: ArelBase {}
 #[async_trait::async_trait]
-pub trait ArelModel: ArelRecord {
+pub trait ArelRecord: ArelBase {
     fn query() -> crate::manager::SelectManager<Self>
     where
         Self: Sized,
@@ -125,6 +124,15 @@ pub trait ArelModel: ArelRecord {
                 Err(e)
             }
         }
+    }
+}
+
+pub trait ArelModel: ArelRecord {
+    fn table_name() -> Cow<'static, str>
+    where
+        Self: Sized,
+    {
+        <Self as ArelBase>::struct_name()
     }
 }
 

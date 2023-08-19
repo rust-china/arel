@@ -1,7 +1,7 @@
 use arel::prelude::*;
 
 #[allow(dead_code)]
-#[derive(sqlx::FromRow)]
+#[arel]
 struct User {
     id: i32,
     name: String,
@@ -10,9 +10,7 @@ struct User {
     lock_version: Option<i32>,
     expired_at: Option<chrono::DateTime<chrono::FixedOffset>>,
 }
-impl ArelBase for User {}
-impl ArelRecord for User {}
-impl ArelModel for User {}
+// impl ArelModel for User {}
 
 async fn init_db() -> anyhow::Result<()> {
     let visitor = arel::visitor::get_or_init(|| Box::pin(async { arel::DatabasePoolOptions::new().max_connections(5).connect("sqlite::memory:").await })).await?;

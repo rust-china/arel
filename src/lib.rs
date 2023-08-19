@@ -7,6 +7,7 @@ compile_error!("feature `sqlite` and `mysql` shouldn't be enabled both.");
 compile_error!("feature `sqlite` and `postgres` shouldn't be enabled both.");
 #[cfg(all(feature = "mysql", feature = "postgres"))]
 compile_error!("feature `mysql` and `postgres` shouldn't be enabled both.");
+pub use arel_macros::arel;
 
 pub mod manager;
 pub mod prelude;
