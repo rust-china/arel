@@ -27,6 +27,8 @@ impl Sql {
     /// use arel::prelude::*;
     /// struct User {}
     /// impl ArelBase for User {}
+    /// impl ArelRecord for User {}
+    /// impl ArelModel for User {}
     ///
     /// let sql = arel::Sql::range_sql("age", ..18).unwrap();
     /// assert_eq!(sql.to_sql_string().unwrap(), r#"age < 18"#);
@@ -206,7 +208,6 @@ impl Sql {
     }
 }
 
-#[cfg(any(feature = "sqlite", feature = "mysql", feature = "postgres"))]
 impl Sql {
     pub fn to_query_builder<'a>(&self) -> anyhow::Result<sqlx::QueryBuilder<'a, crate::Database>> {
         let mut query_builder = sqlx::QueryBuilder::new("");

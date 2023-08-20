@@ -21,13 +21,15 @@ impl Limit {
 
 #[cfg(test)]
 mod tests {
-    use crate::prelude::ArelBase;
+    use crate::prelude::*;
 
     use super::*;
     #[test]
     fn to_sql() {
         struct User {}
         impl ArelBase for User {}
+        impl ArelRecord for User {}
+        impl ArelModel for User {}
 
         let limit = Limit::new(10);
         assert_eq!(limit.to_sql().unwrap().to_sql_string().unwrap(), "LIMIT 10");

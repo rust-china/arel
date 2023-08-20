@@ -1,8 +1,8 @@
-mod arel_base;
+mod arel_record;
 
 use proc_macro::TokenStream;
 use quote::ToTokens;
-use syn::{parse::Parser, spanned::Spanned};
+use syn::parse::Parser;
 
 pub(crate) struct Input {
     args: Option<syn::punctuated::Punctuated<syn::Meta, syn::Token![,]>>,
@@ -32,23 +32,35 @@ pub fn create_arel(args: TokenStream, input: TokenStream) -> TokenStream {
 fn do_expand(input: &Input) -> syn::Result<proc_macro2::TokenStream> {
     let st = &input.st;
     let model_name_ident = &input.st.ident;
+    let model_fields = get_fields(input)?
+        .clone()
+        .into_iter()
+        .map(|mut f| {
+            f.attrs = vec![];
+            f
+        })
+        .collect::<Vec<syn::Field>>();
 
-    let arel_base_impl_table_name = arel_base::impl_table_name(input)?;
+    let arel_record_impl_table_name = arel_record::impl_table_name(input)?;
+    let arel_record_impl_primary_key_or_primary_keys = arel_record::impl_primary_key_or_primary_keys(input)?;
 
     let (impl_generics, type_generics, where_clause) = st.generics.split_for_impl();
     Ok(quote::quote!(
 
         #[derive(Clone, Debug, Default, PartialEq, sqlx::FromRow)]
-        #st
-
-        impl #impl_generics arel::ArelBase for #model_name_ident #type_generics #where_clause {
-            #arel_base_impl_table_name
+        pub struct #model_name_ident {
+            #(#model_fields),*
         }
-        impl #impl_generics arel::ArelRecord for #model_name_ident #type_generics #where_clause {}
+
+        impl #impl_generics arel::ArelBase for #model_name_ident #type_generics #where_clause {}
+        impl #impl_generics arel::ArelRecord for #model_name_ident #type_generics #where_clause {
+            #arel_record_impl_table_name
+            #arel_record_impl_primary_key_or_primary_keys
+        }
     ))
 }
 
-fn get_path_value(input: &Input, field: Option<&syn::Field>, attr_path: &str, allowed_path_names: Option<Vec<&str>>) -> syn::Result<Option<syn::Ident>> {
+fn get_path_value(input: &Input, field: Option<&syn::Field>, attr_path: &str, allowed_path_names: Option<Vec<&str>>) -> syn::Result<Option<String>> {
     let metas = match field {
         Some(field) => field.attrs.iter().map(|f| &f.meta).collect::<Vec<&syn::Meta>>(),
         None => match &input.args {
@@ -64,10 +76,10 @@ fn get_path_value(input: &Input, field: Option<&syn::Field>, attr_path: &str, al
                     match &kv.value {
                         syn::Expr::Lit(expr) => {
                             if let syn::Lit::Str(ref ident_str) = expr.lit {
-                                return Ok(Some(syn::Ident::new(ident_str.value().as_str(), field.span())));
+                                return Ok(Some(ident_str.value().to_string()));
                             }
                         }
-                        _ => (),
+                        _ => return Ok(Some("".to_string())),
                     }
                 }
                 if let Some(ref allowed_path_names) = allowed_path_names {
@@ -87,28 +99,38 @@ fn get_path_value(input: &Input, field: Option<&syn::Field>, attr_path: &str, al
                     if p.ident == "arel" {
                         let nested_metas = syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated.parse2(list.tokens.clone()).unwrap();
                         for nested_meta in nested_metas.iter() {
-                            if let syn::Meta::NameValue(kv) = nested_meta {
-                                if kv.path.is_ident(attr_path) {
-                                    match &kv.value {
-                                        syn::Expr::Lit(expr) => {
-                                            if let syn::Lit::Str(ref ident_str) = expr.lit {
-                                                return Ok(Some(syn::Ident::new(ident_str.value().as_str(), field.span())));
+                            match nested_meta {
+                                syn::Meta::NameValue(kv) => {
+                                    if kv.path.is_ident(attr_path) {
+                                        match &kv.value {
+                                            syn::Expr::Lit(expr) => {
+                                                if let syn::Lit::Str(ref ident_str) = expr.lit {
+                                                    return Ok(Some(ident_str.value().to_string()));
+                                                }
                                             }
+                                            _ => return Ok(Some("".to_string())),
                                         }
-                                        _ => (),
+                                    }
+                                    if let Some(ref allowed_path_names) = allowed_path_names {
+                                        match kv.path.get_ident() {
+                                            Some(kv_path_ident) => {
+                                                let kv_path_name = kv_path_ident.to_string();
+                                                if allowed_path_names.iter().find(|allowed_name| *allowed_name == &kv_path_name).is_none() {
+                                                    return Err(syn::Error::new_spanned(&list, format!(r#"expected `arel({} = "...")`"#, allowed_path_names.join("|"))));
+                                                }
+                                            }
+                                            _ => (),
+                                        }
                                     }
                                 }
-                                if let Some(ref allowed_path_names) = allowed_path_names {
-                                    match kv.path.get_ident() {
-                                        Some(kv_path_ident) => {
-                                            let kv_path_name = kv_path_ident.to_string();
-                                            if allowed_path_names.iter().find(|allowed_name| *allowed_name == &kv_path_name).is_none() {
-                                                return Err(syn::Error::new_spanned(&list, format!(r#"expected `arel({} = "...")`"#, allowed_path_names.join("|"))));
-                                            }
+                                syn::Meta::Path(path) => {
+                                    for path_segment in &path.segments {
+                                        if path_segment.ident == attr_path {
+                                            return Ok(Some("".to_string()));
                                         }
-                                        _ => (),
                                     }
                                 }
+                                _ => (),
                             }
                         }
                     }
@@ -118,4 +140,17 @@ fn get_path_value(input: &Input, field: Option<&syn::Field>, attr_path: &str, al
         }
     }
     Ok(None)
+}
+
+pub(crate) type StructFields = syn::punctuated::Punctuated<syn::Field, syn::Token![,]>;
+fn get_fields(input: &Input) -> syn::Result<&StructFields> {
+    if let syn::Data::Struct(syn::DataStruct {
+        fields: syn::Fields::Named(syn::FieldsNamed { named, .. }),
+        ..
+    }) = &input.st.data
+    {
+        Ok(named)
+    } else {
+        Err(syn::Error::new_spanned(&input.st, "Must Define on Struct, Not on Enum"))
+    }
 }

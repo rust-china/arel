@@ -4,13 +4,14 @@ use arel::prelude::*;
 #[allow(dead_code)]
 struct User {
     id: i32,
+    #[arel(primary_key)]
     name: String,
     desc: Option<String>,
     done: Option<bool>,
     lock_version: Option<i32>,
     expired_at: Option<chrono::DateTime<chrono::FixedOffset>>,
 }
-// impl ArelModel for User {}
+impl ArelModel for User {}
 
 async fn init_db() -> anyhow::Result<()> {
     let visitor = arel::visitor::get_or_init(|| Box::pin(async { arel::DatabasePoolOptions::new().max_connections(5).connect("sqlite::memory:").await })).await?;

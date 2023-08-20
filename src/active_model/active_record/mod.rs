@@ -2,23 +2,23 @@
 use crate::prelude::*;
 use std::ops::{Deref, DerefMut};
 
-pub struct ActiveRecord<M: ArelBase> {
+pub struct ActiveRecord<M: ArelModel> {
     table: M,
 }
 
-impl<M: ArelBase> Deref for ActiveRecord<M> {
+impl<M: ArelModel> Deref for ActiveRecord<M> {
     type Target = M;
     fn deref(&self) -> &Self::Target {
         &self.table
     }
 }
-impl<M: ArelBase> DerefMut for ActiveRecord<M> {
+impl<M: ArelModel> DerefMut for ActiveRecord<M> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.table
     }
 }
 
-impl<M: ArelBase> ActiveRecord<M> {
+impl<M: ArelModel> ActiveRecord<M> {
     pub fn new(table: M) -> Self {
         Self { table }
     }
@@ -32,7 +32,7 @@ impl<M: ArelBase> ActiveRecord<M> {
     //     select_manager.select_sql(sql);
     //     select_manager
     // }
-    // pub fn join<U: ArelBase>(join_type: crate::JoinType) -> SelectManager<M> {
+    // pub fn join<U: ArelModel>(join_type: crate::JoinType) -> SelectManager<M> {
     //     let mut select_manager = SelectManager::<M>::default();
     //     select_manager.join::<U>(join_type);
     //     select_manager
@@ -42,12 +42,12 @@ impl<M: ArelBase> ActiveRecord<M> {
     //     select_manager.join_sql(sql);
     //     select_manager
     // }
-    // pub fn inner_join<U: ArelBase>() -> SelectManager<M> {
+    // pub fn inner_join<U: ArelModel>() -> SelectManager<M> {
     //     let mut select_manager = SelectManager::<M>::default();
     //     select_manager.join::<U>(crate::JoinType::InnerJoin);
     //     select_manager
     // }
-    // pub fn left_join<U: ArelBase>() -> SelectManager<M> {
+    // pub fn left_join<U: ArelModel>() -> SelectManager<M> {
     //     let mut select_manager = SelectManager::<M>::default();
     //     select_manager.join::<U>(crate::JoinType::LeftJoin);
     //     select_manager
@@ -124,6 +124,8 @@ mod tests {
             id: i32,
         }
         impl ArelBase for User {}
+        impl ArelRecord for User {}
+        impl ArelModel for User {}
 
         let active_record = ActiveRecord::new(User { id: 1 });
         assert_eq!(active_record.id, 1);

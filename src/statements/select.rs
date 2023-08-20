@@ -1,14 +1,14 @@
-use crate::{prelude::ArelBase, statements::ArelStatement};
+use crate::{prelude::ArelModel, statements::ArelStatement};
 use std::marker::PhantomData;
 
 #[derive(Debug)]
-pub struct Select<M: ArelBase> {
+pub struct Select<M: ArelModel> {
     distinct: bool,
     sqls: Vec<crate::Sql>,
     _marker: PhantomData<M>,
 }
 
-impl<M: ArelBase> ArelStatement for Select<M> {
+impl<M: ArelModel> ArelStatement for Select<M> {
     fn sqls(&self) -> Option<&Vec<crate::Sql>> {
         if self.sqls.len() > 0 {
             Some(&self.sqls)
@@ -37,7 +37,7 @@ impl<M: ArelBase> ArelStatement for Select<M> {
     }
 }
 
-impl<M: ArelBase> Default for Select<M> {
+impl<M: ArelModel> Default for Select<M> {
     fn default() -> Self {
         Self {
             distinct: false,
@@ -47,7 +47,7 @@ impl<M: ArelBase> Default for Select<M> {
     }
 }
 
-impl<M: ArelBase> Select<M> {
+impl<M: ArelModel> Select<M> {
     /// # Examples
     ///
     /// ```
@@ -55,6 +55,8 @@ impl<M: ArelBase> Select<M> {
     /// use arel::statements::select::Select;
     /// struct User {}
     /// impl ArelBase for User {}
+    /// impl ArelRecord for User {}
+    /// impl ArelModel for User {}
     /// let select = Select::<User>::new(vec!["name", "age"]);
     /// assert_eq!(select.to_sql().unwrap().to_sql_string().unwrap(), r#"SELECT "user"."name", "user"."age" FROM "user""#);
     ///
@@ -81,6 +83,8 @@ impl<M: ArelBase> Select<M> {
     /// use arel::statements::select::Select;
     /// struct User {}
     /// impl ArelBase for User {}
+    /// impl ArelRecord for User {}
+    /// impl ArelModel for User {}
     /// let select = Select::<User>::new_sqls(vec!["name", "age"]);
     /// assert_eq!(select.to_sql().unwrap().to_sql_string().unwrap(), r#"SELECT name, age FROM "user""#);
     ///

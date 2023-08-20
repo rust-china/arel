@@ -1,13 +1,13 @@
-use crate::{prelude::ArelBase, statements::ArelStatement};
+use crate::{prelude::ArelModel, statements::ArelStatement};
 use std::marker::PhantomData;
 
 #[derive(Debug)]
-pub struct Order<M: ArelBase> {
+pub struct Order<M: ArelModel> {
     sqls: Vec<crate::Sql>,
     _marker: PhantomData<M>,
 }
 
-impl<M: ArelBase> ArelStatement for Order<M> {
+impl<M: ArelModel> ArelStatement for Order<M> {
     fn sqls(&self) -> Option<&Vec<crate::Sql>> {
         if self.sqls.len() > 0 {
             Some(&self.sqls)
@@ -31,7 +31,7 @@ impl<M: ArelBase> ArelStatement for Order<M> {
     }
 }
 
-impl<M: ArelBase> Order<M> {
+impl<M: ArelModel> Order<M> {
     /// # Examples
     ///
     /// ```
@@ -39,6 +39,8 @@ impl<M: ArelBase> Order<M> {
     /// use arel::statements::order::Order;
     /// struct User {}
     /// impl ArelBase for User {}
+    /// impl ArelRecord for User {}
+    /// impl ArelModel for User {}
     /// let order = Order::<User>::new("name", arel::SortType::Desc);
     /// assert_eq!(order.to_sql().unwrap().to_sql_string().unwrap(), r#"ORDER BY "user"."name" DESC"#);
     ///
@@ -53,6 +55,8 @@ impl<M: ArelBase> Order<M> {
     /// use arel::statements::order::Order;
     /// struct User {}
     /// impl ArelBase for User {}
+    /// impl ArelRecord for User {}
+    /// impl ArelModel for User {}
     /// let order = Order::<User>::new_columns(vec![("name", arel::SortType::Desc), ("age", arel::SortType::Asc)]);
     /// assert_eq!(order.to_sql().unwrap().to_sql_string().unwrap(), r#"ORDER BY "user"."name" DESC, "user"."age" ASC"#);
     ///
@@ -80,6 +84,8 @@ impl<M: ArelBase> Order<M> {
     /// use arel::statements::order::Order;
     /// struct User {}
     /// impl ArelBase for User {}
+    /// impl ArelRecord for User {}
+    /// impl ArelModel for User {}
     /// let order = Order::<User>::new_sqls(vec!["name DESC", "age ASC"]);
     /// assert_eq!(order.to_sql().unwrap().to_sql_string().unwrap(), r#"ORDER BY name DESC, age ASC"#);
     ///

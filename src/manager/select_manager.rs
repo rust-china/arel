@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use std::ops::RangeBounds;
 
 #[derive(Debug)]
-pub struct SelectManager<M: ArelRecord> {
+pub struct SelectManager<M: ArelModel> {
     select: crate::statements::select::Select<M>,
     join: Option<crate::statements::join::Join<M>>,
     r#where: Option<crate::statements::r#where::Where<M>>,
@@ -16,7 +16,7 @@ pub struct SelectManager<M: ArelRecord> {
     _marker: PhantomData<M>,
 }
 
-impl<M: ArelRecord> Default for SelectManager<M> {
+impl<M: ArelModel> Default for SelectManager<M> {
     fn default() -> Self {
         Self {
             select: crate::statements::select::Select::<M>::default(),
@@ -33,7 +33,7 @@ impl<M: ArelRecord> Default for SelectManager<M> {
     }
 }
 
-impl<M: ArelRecord> SelectManager<M> {
+impl<M: ArelModel> SelectManager<M> {
     /// # Examples
     ///
     /// ```
@@ -43,6 +43,7 @@ impl<M: ArelRecord> SelectManager<M> {
     /// struct User {}
     /// impl ArelBase for User {}
     /// impl ArelRecord for User {}
+    /// impl ArelModel for User {}
     /// let mut select_manager = SelectManager::<User>::default();
     /// assert_eq!(select_manager.to_sql().to_sql_string().unwrap(), r#"SELECT "user".* FROM "user""#);
     ///
@@ -64,6 +65,7 @@ impl<M: ArelRecord> SelectManager<M> {
     /// struct User {}
     /// impl ArelBase for User {}
     /// impl ArelRecord for User {}
+    /// impl ArelModel for User {}
     /// let mut select_manager = SelectManager::<User>::default();
     /// select_manager.select_sql("COUNT(*)");
     /// assert_eq!(select_manager.to_sql().to_sql_string().unwrap(), r#"SELECT COUNT(*) FROM "user""#);
@@ -83,6 +85,7 @@ impl<M: ArelRecord> SelectManager<M> {
     /// struct User {}
     /// impl ArelBase for User {}
     /// impl ArelRecord for User {}
+    /// impl ArelModel for User {}
     /// let mut select_manager = SelectManager::<User>::default();
     /// select_manager.distinct();
     /// assert_eq!(select_manager.to_sql().to_sql_string().unwrap(), r#"SELECT DISTINCT "user".* FROM "user""#);
@@ -101,15 +104,17 @@ impl<M: ArelRecord> SelectManager<M> {
     /// struct User {}
     /// impl ArelBase for User {}
     /// impl ArelRecord for User {}
+    /// impl ArelModel for User {}
     /// #[derive(sqlx::FromRow)]
     /// struct Wallet {}
     /// impl ArelBase for Wallet {}
     /// impl ArelRecord for Wallet {}
+    /// impl ArelModel for Wallet {}
     /// let mut select_manager = SelectManager::<User>::default();
     /// select_manager.join::<Wallet>(arel::JoinType::InnerJoin);
     /// assert_eq!(select_manager.to_sql().to_sql_string().unwrap(), r#"SELECT "user".* FROM "user" INNER JOIN "wallet" ON "user"."id" = "wallet"."user_id""#);
     /// ```
-    pub fn join<U: ArelBase>(&mut self, join_type: crate::JoinType) -> &mut Self {
+    pub fn join<U: ArelModel>(&mut self, join_type: crate::JoinType) -> &mut Self {
         if let Some(join) = &mut self.join {
             join.join::<U>(join_type);
         } else {
@@ -119,10 +124,10 @@ impl<M: ArelRecord> SelectManager<M> {
         }
         self
     }
-    pub fn inner_join<U: ArelBase>(&mut self) -> &mut Self {
+    pub fn inner_join<U: ArelModel>(&mut self) -> &mut Self {
         self.join::<U>(crate::JoinType::InnerJoin)
     }
-    pub fn left_join<U: ArelBase>(&mut self) -> &mut Self {
+    pub fn left_join<U: ArelModel>(&mut self) -> &mut Self {
         self.join::<U>(crate::JoinType::LeftJoin)
     }
     /// # Examples
@@ -134,6 +139,7 @@ impl<M: ArelRecord> SelectManager<M> {
     /// struct User {}
     /// impl ArelBase for User {}
     /// impl ArelRecord for User {}
+    /// impl ArelModel for User {}
     /// let mut select_manager = SelectManager::<User>::default();
     /// select_manager.join_sql("LEFT JOIN wallet on user.id = wallet.user_id");
     /// assert_eq!(select_manager.to_sql().to_sql_string().unwrap(), r#"SELECT "user".* FROM "user" LEFT JOIN wallet on user.id = wallet.user_id"#);
@@ -336,8 +342,7 @@ impl<M: ArelRecord> SelectManager<M> {
     }
 }
 
-#[cfg(any(feature = "sqlite", feature = "mysql", feature = "postgres"))]
-impl<M: ArelRecord> SelectManager<M> {
+impl<M: ArelModel> SelectManager<M> {
     pub fn to_query_builder<'a>(&self) -> anyhow::Result<sqlx::QueryBuilder<'a, crate::Database>> {
         self.to_sql().to_query_builder()
     }
@@ -368,6 +373,7 @@ mod tests {
     struct User {}
     impl ArelBase for User {}
     impl ArelRecord for User {}
+    impl ArelModel for User {}
 
     #[test]
     fn to_sql() {

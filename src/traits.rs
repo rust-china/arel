@@ -21,8 +21,6 @@ use std::pin::Pin;
 ///
 /// assert_eq!(User::struct_name(), "User");
 /// assert_eq!(UserWallet::<String>::struct_name(), "UserWallet<alloc::string::String>");
-/// assert_eq!(User::table_name(), "user");
-/// assert_eq!(UserWallet::<String>::table_name(), "user_wallet");
 /// ```
 pub trait ArelBase {
     fn struct_name_full_path() -> Cow<'static, str>
@@ -44,33 +42,7 @@ pub trait ArelBase {
             .as_str();
         Cow::Owned(struct_name.to_owned())
     }
-    fn table_name() -> Cow<'static, str>
-    where
-        Self: Sized,
-    {
-        let struct_name: Cow<'_, str> = Self::struct_name();
-        let struct_name = regex::Regex::new(r#"^\w+"#).unwrap().find(&struct_name).expect(&format!("match {} fail", struct_name)).as_str();
-        let struct_name = regex::Regex::new(r#"([a-z])([A-Z])"#)
-            .unwrap()
-            .replace(&struct_name, |caps: &regex::Captures| format!("{}_{}", &caps[1], &caps[2]))
-            .to_lowercase();
-        Cow::Owned(struct_name.into())
-    }
-    fn primary_key() -> Option<Cow<'static, str>>
-    where
-        Self: Sized,
-    {
-        if Self::primary_keys().is_some() {
-            return None;
-        }
-        Some(Cow::Borrowed("id"))
-    }
-    fn primary_keys() -> Option<Vec<Cow<'static, str>>>
-    where
-        Self: Sized,
-    {
-        None
-    }
+
     fn validates(&self) -> anyhow::Result<()> {
         Ok(())
     }
@@ -91,25 +63,51 @@ pub trait ArelBase {
 /// impl ArelRecord for User {}
 /// let user = User::default();
 /// assert!(user.validates().is_ok());
-#[async_trait::async_trait]
-pub trait ArelRecord: ArelBase {
-    fn query() -> crate::manager::SelectManager<Self>
+pub trait ArelRecord: ArelBase + Sized {
+    fn _table_name() -> Cow<'static, str>
     where
         Self: Sized,
     {
-        crate::manager::SelectManager::<Self>::default()
+        let struct_name: Cow<'_, str> = Self::struct_name();
+        let struct_name = regex::Regex::new(r#"^\w+"#).unwrap().find(&struct_name).expect(&format!("match {} fail", struct_name)).as_str();
+        let struct_name = regex::Regex::new(r#"([a-z])([A-Z])"#)
+            .unwrap()
+            .replace(&struct_name, |caps: &regex::Captures| format!("{}_{}", &caps[1], &caps[2]))
+            .to_lowercase();
+        Cow::Owned(struct_name.into())
     }
-    #[cfg(any(feature = "sqlite", feature = "mysql", feature = "postgres"))]
-    fn pool() -> anyhow::Result<&'static sqlx::Pool<crate::Database>>
-    where
-        Self: Sized,
-    {
+    fn _primary_key() -> Option<Cow<'static, str>> {
+        Some("id".into())
+    }
+    fn _primary_keys() -> Option<Vec<Cow<'static, str>>> {
+        None
+    }
+    fn _pool() -> anyhow::Result<&'static sqlx::Pool<crate::Database>> {
         Ok(crate::visitor::get()?.pool())
     }
-    #[cfg(any(feature = "sqlite", feature = "mysql", feature = "postgres"))]
+}
+#[async_trait::async_trait]
+pub trait ArelModel: ArelRecord {
+    fn table_name() -> Cow<'static, str> {
+        Self::_table_name()
+    }
+    fn primary_key() -> Option<Cow<'static, str>> {
+        if Self::primary_keys().is_some() {
+            return None;
+        }
+        Self::_primary_key()
+    }
+    fn primary_keys() -> Option<Vec<Cow<'static, str>>> {
+        Self::_primary_keys()
+    }
+    fn query() -> crate::manager::SelectManager<Self> {
+        crate::manager::SelectManager::<Self>::default()
+    }
+    fn pool() -> anyhow::Result<&'static sqlx::Pool<crate::Database>> {
+        Self::_pool()
+    }
     async fn with_transaction<'a, F: Send>(callback: F) -> anyhow::Result<Option<Self>>
     where
-        Self: Sized,
         for<'c> F: FnOnce(&'c mut sqlx::Transaction<'a, crate::Database>) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<Self>>> + Send + 'c>>,
     {
         let pool = Self::pool()?;
@@ -124,15 +122,6 @@ pub trait ArelRecord: ArelBase {
                 Err(e)
             }
         }
-    }
-}
-
-pub trait ArelModel: ArelRecord {
-    fn table_name() -> Cow<'static, str>
-    where
-        Self: Sized,
-    {
-        <Self as ArelBase>::struct_name()
     }
 }
 

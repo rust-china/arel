@@ -8,19 +8,19 @@ pub struct ActiveModel<M> {
     record: ActiveRecord,
 }
 
-impl<M: ArelBase> Deref for ActiveModel<M> {
+impl<M: ArelModel> Deref for ActiveModel<M> {
     type Target = M;
     fn deref(&self) -> &Self::Target {
         &self.record
     }
 }
-impl<M: ArelBase> DerefMut for ActiveModel<M> {
+impl<M: ArelModel> DerefMut for ActiveModel<M> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.record
     }
 }
 
-impl<M: ArelBase> ActiveModel<M> {
+impl<M: ArelModel> ActiveModel<M> {
     pub fn validates(&self) -> bool {
         todo!()
     }
