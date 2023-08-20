@@ -3,9 +3,10 @@ use arel::prelude::*;
 #[arel(table_name = "user")]
 #[allow(dead_code)]
 struct User {
-    id: i32,
     #[arel(primary_key)]
+    pub id: i32,
     name: String,
+    r#type: String,
     desc: Option<String>,
     done: Option<bool>,
     lock_version: Option<i32>,
@@ -20,6 +21,7 @@ async fn init_db() -> anyhow::Result<()> {
             (
                 id             INTEGER PRIMARY KEY NOT NULL,
                 name           VARCHAR(255),
+                type           VARCHAR(255),
                 desc           TEXT,
                 done           BOOLEAN NOT NULL DEFAULT 0,
                 lock_version   INT(11) NOT NULL DEFAULT 0,
@@ -32,7 +34,11 @@ async fn init_db() -> anyhow::Result<()> {
     User::with_transaction(|tx| {
         Box::pin(async move {
             for entry in 0i32..100 {
-                sqlx::query("INSERT INTO user (name) VALUES ($1)").bind(format!("name-{}", entry)).execute(tx.as_mut()).await?;
+                sqlx::query("INSERT INTO user (name, type) VALUES ($1, $2)")
+                    .bind(format!("name-{}", entry))
+                    .bind("Admin")
+                    .execute(tx.as_mut())
+                    .await?;
             }
             Ok(None)
         })
@@ -52,6 +58,13 @@ async fn main() -> anyhow::Result<()> {
 
     let user: User = User::query().fetch_one_as().await?;
     println!("user: {:?}", user);
+    let active_user: ArelActiveUser = user.into();
+    println!("active_user: {:?}", active_user);
+
+    let arel_user: ArelUser = User::query().fetch_one_as().await?;
+    println!("arel_user: {:?}", arel_user);
+    let active_user: ArelActiveUser = arel_user.into();
+    println!("active_user: {:?}", active_user);
 
     let users: Vec<User> = User::query().fetch_all_as().await?;
     println!("user: {:?}", users[0]);

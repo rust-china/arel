@@ -4,7 +4,7 @@ pub(crate) fn impl_table_name(input: &super::Input) -> syn::Result<proc_macro2::
     if let Some(table_name) = super::get_path_value(input, None, "table_name", None)? {
         ret_token_stream.extend(quote::quote!(
             fn _table_name() -> std::borrow::Cow<'static, str> {
-                std::borrow::Cow::Borrowed(stringify!(#table_name))
+                std::borrow::Cow::Borrowed(#table_name)
             }
         ));
     }
@@ -29,7 +29,7 @@ pub(crate) fn impl_primary_key_or_primary_keys(input: &super::Input) -> syn::Res
         let primary_key = &primary_keys[0];
         ret_token_stream.extend(quote::quote!(
             fn _primary_key() -> std::option::Option<std::borrow::Cow<'static, str>> {
-                std::option::Option::Some(#primary_key.into())
+                std::option::Option::Some(std::borrow::Cow::Borrowed(#primary_key))
             }
         ));
     } else if primary_keys.len() > 1 {

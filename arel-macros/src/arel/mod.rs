@@ -1,3 +1,5 @@
+mod arel_active_model;
+mod arel_model;
 mod arel_record;
 
 use proc_macro::TokenStream;
@@ -44,11 +46,15 @@ fn do_expand(input: &Input) -> syn::Result<proc_macro2::TokenStream> {
     let arel_record_impl_table_name = arel_record::impl_table_name(input)?;
     let arel_record_impl_primary_key_or_primary_keys = arel_record::impl_primary_key_or_primary_keys(input)?;
 
-    let (impl_generics, type_generics, where_clause) = st.generics.split_for_impl();
+    let generics = &st.generics;
+    let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
+
+    let arel_model = arel_model::create_arel_model(input)?;
+    let arel_active_model = arel_active_model::create_arel_active_model(input)?;
     Ok(quote::quote!(
 
         #[derive(Clone, Debug, Default, PartialEq, sqlx::FromRow)]
-        pub struct #model_name_ident {
+        pub struct #model_name_ident #generics {
             #(#model_fields),*
         }
 
@@ -57,6 +63,9 @@ fn do_expand(input: &Input) -> syn::Result<proc_macro2::TokenStream> {
             #arel_record_impl_table_name
             #arel_record_impl_primary_key_or_primary_keys
         }
+
+        #arel_model
+        #arel_active_model
     ))
 }
 
@@ -154,3 +163,36 @@ fn get_fields(input: &Input) -> syn::Result<&StructFields> {
         Err(syn::Error::new_spanned(&input.st, "Must Define on Struct, Not on Enum"))
     }
 }
+
+fn get_generic_inner_type<'a>(r#type: &'a syn::Type, outer_ident_name: &str) -> Option<&'a syn::Type> {
+    if let syn::Type::Path(syn::TypePath { path: syn::Path { segments, .. }, .. }) = r#type {
+        if let Some(seg) = segments.last() {
+            if seg.ident.to_string() == outer_ident_name {
+                if let syn::PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments { args, .. }) = &seg.arguments {
+                    if let Some(syn::GenericArgument::Type(inner_type)) = args.first() {
+                        return Some(inner_type);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+// PhantomData<M> => "M"
+// pub(crate) fn get_phantom_data_generic_type_name(field: &syn::Field) -> syn::Result<Option<String>> {
+//     if let syn::Type::Path(syn::TypePath { path: syn::Path { segments, .. }, .. }) = &field.ty {
+//         if let Some(segment) = segments.last() {
+//             if segment.ident == "PhantomData" {
+//                 if let syn::PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments { args, .. }) = &segment.arguments {
+//                     if let Some(syn::GenericArgument::Type(syn::Type::Path(type_path))) = args.first() {
+//                         if let Some(syn::PathSegment { ident, .. }) = type_path.path.segments.first() {
+//                             return Ok(Some(ident.to_string()));
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//     }
+//     Ok(None)
+// }
