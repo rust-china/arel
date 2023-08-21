@@ -33,7 +33,7 @@ async fn init_db() -> anyhow::Result<()> {
 
     User::with_transaction(|tx| {
         Box::pin(async move {
-            for entry in 0i32..100 {
+            for entry in 1i32..=100 {
                 sqlx::query("INSERT INTO user (name, type) VALUES ($1, $2)")
                     .bind(format!("name-{}", entry))
                     .bind("Admin")
@@ -56,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
     let row: (i64,) = User::query().select_sql("COUNT(*)").fetch_one_as().await?;
     println!("total: {}", row.0);
 
-    let user: User = User::query().fetch_one_as().await?;
+    let user: User = User::query().r#where("id", 5).fetch_one_as().await?;
     println!("user: {:?}", user);
     let active_user: ArelActiveUser = user.into();
     println!("active_user: {:?}", active_user);
@@ -68,6 +68,10 @@ async fn main() -> anyhow::Result<()> {
 
     let users: Vec<User> = User::query().fetch_all_as().await?;
     println!("user: {:?}", users[0]);
+
+    // println!("--- : {}", User::query().r#where_sql("name = name-5").to_sql().to_sql_string().unwrap());
+    let user: User = User::query().r#where("name", "name-5").fetch_one_as().await?;
+    println!("==== {:?}", user);
 
     Ok(())
 }

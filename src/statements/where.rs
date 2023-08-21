@@ -51,6 +51,6 @@ mod tests {
 
         let mut r#where = Where::<User>::new();
         r#where.filter_and("username", "sanmu");
-        assert_eq!(r#where.to_sql().unwrap().to_sql_string().unwrap(), r#"WHERE ("user"."username" = "sanmu")"#);
+        assert_eq!(r#where.to_sql().unwrap().to_sql_string().unwrap(), r#"WHERE ("user"."username" = ?{"String":"sanmu"})"#);
     }
 }

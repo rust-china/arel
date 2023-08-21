@@ -1,4 +1,7 @@
-use std::ops::{Bound, RangeBounds};
+mod query_builder;
+
+pub use query_builder::QueryBuilder;
+use std::ops::{Bound, DerefMut, RangeBounds};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Sql {
@@ -150,6 +153,12 @@ impl Sql {
         }
         self
     }
+    pub fn prepare_symbol(&self) -> String {
+        if cfg!(feature = "postgres") {
+            return format!("${}", if let Some(prepare_values) = &self.prepare_values { prepare_values.len() + 1 } else { 1 });
+        }
+        "?".to_string()
+    }
     pub fn to_sql_string(&self) -> anyhow::Result<String> {
         if let Some(prepare_values) = &self.prepare_values {
             let mut prepare_idx = 0;
@@ -168,7 +177,7 @@ impl Sql {
                     }
                     '$' => {
                         let mut prepare_end_idx = idx;
-                        while prepare_end_idx < chars_len {
+                        while prepare_end_idx < chars_len - 1 {
                             match chars[prepare_end_idx + 1] {
                                 '0'..='9' => {
                                     prepare_end_idx += 1;
@@ -192,7 +201,7 @@ impl Sql {
                             raw_sql.push_str(&format!(r#"?b"{}""#, bytes.escape_ascii().to_string()));
                         }
                         _ => {
-                            raw_sql.push_str(&format!("?{}", prepare_value.to_sql().value));
+                            raw_sql.push_str(&format!("?{}", serde_json::to_string(prepare_value).unwrap()));
                         }
                     }
                 } else {
@@ -209,8 +218,8 @@ impl Sql {
 }
 
 impl Sql {
-    pub fn to_query_builder<'a>(&self) -> anyhow::Result<sqlx::QueryBuilder<'a, crate::Database>> {
-        let mut query_builder = sqlx::QueryBuilder::new("");
+    pub fn to_query_builder<'a>(&self) -> anyhow::Result<QueryBuilder<'a>> {
+        let mut query_builder = QueryBuilder::default();
         if let Some(prepare_values) = &self.prepare_values {
             let mut prepare_idx = 0;
 
@@ -227,7 +236,7 @@ impl Sql {
                     }
                     '$' => {
                         let mut prepare_end_idx = idx;
-                        while prepare_end_idx < chars_len {
+                        while prepare_end_idx < chars_len - 1 {
                             match chars[prepare_end_idx + 1] {
                                 '0'..='9' => {
                                     prepare_end_idx += 1;
@@ -250,10 +259,10 @@ impl Sql {
                 if should_replace {
                     let prepare_value = prepare_values.get(prepare_idx).ok_or_else(|| anyhow::anyhow!("参数不足"))?;
                     prepare_idx += 1;
-                    query_builder.push_bind(serde_json::json!(prepare_value));
+                    query_builder.push_bind_prepare_value(prepare_value)?;
                 }
 
-                idx += next_idx;
+                idx = next_idx;
             }
         } else {
             query_builder.push(&self.value);
@@ -265,7 +274,7 @@ impl Sql {
         E: sqlx::Executor<'a, Database = crate::Database>,
     {
         let mut query_builder = self.to_query_builder()?;
-        let query = query_builder.build();
+        let query = query_builder.deref_mut().build();
         match query.fetch_one(executor).await {
             Ok(val) => Ok(val),
             Err(err) => Err(anyhow::anyhow!(err.to_string())),
@@ -332,6 +341,6 @@ mod tests {
             r#"* from users where users.id = ? and name = ?"#,
             vec![Into::<crate::Value>::into(1), Into::<crate::Value>::into("sanmu")],
         );
-        assert_eq!(&sql.to_sql_string().unwrap(), r#"select * from users where users.id = ?1 and name = ?"sanmu""#);
+        assert_eq!(&sql.to_sql_string().unwrap(), r#"select * from users where users.id = ?{"Int":1} and name = ?{"String":"sanmu"}"#);
     }
 }

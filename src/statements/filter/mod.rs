@@ -84,10 +84,10 @@ impl<M: ArelModel> Filter<M> {
     /// impl ArelModel for User {}
     /// let mut filter = Filter::<User>::new();
     /// filter.filter_and("username", "sanmu");
-    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = "sanmu")"#);
+    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = ?{"String":"sanmu"})"#);
     ///
     /// filter.filter_and("age", vec![18, 20]);
-    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = "sanmu") AND ("user"."age" IN (18,20))"#);
+    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = ?{"String":"sanmu"}) AND ("user"."age" IN (18,20))"#);
     ///
     /// ```
     pub fn filter_and<K: AsRef<str>, V: Into<crate::Value>>(&mut self, key: K, value: V) -> &mut Self {
@@ -104,10 +104,10 @@ impl<M: ArelModel> Filter<M> {
     /// impl ArelModel for User {}
     /// let mut filter = Filter::<User>::new();
     /// filter.filter_and_pairs(vec![("username", Into::<arel::Value>::into("sanmu")), ("age", Into::<arel::Value>::into(vec![18, 20]))]);
-    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = "sanmu" AND "user"."age" IN (18,20))"#);
+    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = ?{"String":"sanmu"} AND "user"."age" IN (18,20))"#);
     ///
     /// filter.filter_and("gender", "male");
-    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = "sanmu" AND "user"."age" IN (18,20)) AND ("user"."gender" = "male")"#);
+    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = ?{"String":"sanmu"} AND "user"."age" IN (18,20)) AND ("user"."gender" = ?{"String":"male"})"#);
     ///
     /// ```
     pub fn filter_and_pairs<K: AsRef<str>, V: Into<crate::Value>>(&mut self, pairs: Vec<(K, V)>) -> &mut Self {
@@ -118,12 +118,20 @@ impl<M: ArelModel> Filter<M> {
             let value: crate::Value = value.into();
             match &value {
                 crate::Value::Array(_) => {
-                    sql.push_str(format!(r#""{}"."{}" IN "#, table_name, key.as_ref()));
-                    sql.push_sql(value.to_sql());
+                    sql.push_str(format!(r#""{}"."{}""#, table_name, key.as_ref()));
+                    if let Some(v_sql) = value.to_sql() {
+                        sql.push_str(" IN ").push_sql(v_sql);
+                    } else {
+                        sql.push_str(" IS NULL");
+                    }
                 }
                 _ => {
-                    sql.push_str(format!(r#""{}"."{}" = "#, table_name, key.as_ref()));
-                    sql.push_sql(value.to_sql());
+                    sql.push_str(format!(r#""{}"."{}""#, table_name, key.as_ref()));
+                    if let Some(v_sql) = value.to_sql() {
+                        sql.push_str(" = ").push_sql(v_sql);
+                    } else {
+                        sql.push_str(" IS NULL");
+                    }
                 }
             }
             filter_and.sqls.push(sql);
@@ -148,10 +156,10 @@ impl<M: ArelModel> Filter<M> {
     /// impl ArelModel for User {}
     /// let mut filter = Filter::<User>::new();
     /// filter.filter_and_not("username", "sanmu");
-    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" != "sanmu")"#);
+    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" != ?{"String":"sanmu"})"#);
     ///
     /// filter.filter_and_not("aga", vec![18, 20]);
-    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" != "sanmu") AND ("user"."aga" NOT IN (18,20))"#);
+    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" != ?{"String":"sanmu"}) AND ("user"."aga" NOT IN (18,20))"#);
     ///
     /// ```
     pub fn filter_and_not<K: AsRef<str>, V: Into<crate::Value>>(&mut self, key: K, value: V) -> &mut Self {
@@ -165,12 +173,20 @@ impl<M: ArelModel> Filter<M> {
             let value: crate::Value = value.into();
             match &value {
                 crate::Value::Array(_) => {
-                    sql.push_str(format!(r#""{}"."{}" NOT IN "#, table_name, key.as_ref()));
-                    sql.push_sql(value.to_sql());
+                    sql.push_str(format!(r#""{}"."{}""#, table_name, key.as_ref()));
+                    if let Some(v_sql) = value.to_sql() {
+                        sql.push_str(" NOT IN ").push_sql(v_sql);
+                    } else {
+                        sql.push_str(" IS NOT NULL");
+                    }
                 }
                 _ => {
-                    sql.push_str(format!(r#""{}"."{}" != "#, table_name, key.as_ref()));
-                    sql.push_sql(value.to_sql());
+                    sql.push_str(format!(r#""{}"."{}""#, table_name, key.as_ref()));
+                    if let Some(v_sql) = value.to_sql() {
+                        sql.push_str(" != ").push_sql(v_sql);
+                    } else {
+                        sql.push_str(" IS NOT NULL");
+                    }
                 }
             }
             filter_and.sqls.push(sql);
@@ -189,13 +205,13 @@ impl<M: ArelModel> Filter<M> {
     /// impl ArelModel for User {}
     /// let mut filter = Filter::<User>::new();
     /// filter.filter_or("username", "sanmu");
-    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = "sanmu")"#);
+    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = ?{"String":"sanmu"})"#);
     ///
     /// filter.filter_or("age", vec![18, 20]);
-    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = "sanmu") OR ("user"."age" IN (18,20))"#);
+    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = ?{"String":"sanmu"}) OR ("user"."age" IN (18,20))"#);
     ///
     /// filter.filter_and("gender", "male");
-    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = "sanmu") OR ("user"."age" IN (18,20)) AND ("user"."gender" = "male")"#);
+    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = ?{"String":"sanmu"}) OR ("user"."age" IN (18,20)) AND ("user"."gender" = ?{"String":"male"})"#);
     ///
     /// ```
     pub fn filter_or<K: AsRef<str>, V: Into<crate::Value>>(&mut self, key: K, value: V) -> &mut Self {
@@ -212,10 +228,10 @@ impl<M: ArelModel> Filter<M> {
     /// impl ArelModel for User {}
     /// let mut filter = Filter::<User>::new();
     /// filter.filter_or_pairs(vec![("username", Into::<arel::Value>::into("sanmu")), ("age", Into::<arel::Value>::into(vec![18, 20]))]);
-    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = "sanmu" OR "user"."age" IN (18,20))"#);
+    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = ?{"String":"sanmu"} OR "user"."age" IN (18,20))"#);
     ///
     /// filter.filter_and("gender", "male");
-    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = "sanmu" OR "user"."age" IN (18,20)) AND ("user"."gender" = "male")"#);
+    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = ?{"String":"sanmu"} OR "user"."age" IN (18,20)) AND ("user"."gender" = ?{"String":"male"})"#);
     ///
     /// ```
     pub fn filter_or_pairs<K: AsRef<str>, V: Into<crate::Value>>(&mut self, pairs: Vec<(K, V)>) -> &mut Self {
@@ -226,12 +242,20 @@ impl<M: ArelModel> Filter<M> {
             let value: crate::Value = value.into();
             match &value {
                 crate::Value::Array(_) => {
-                    sql.push_str(format!(r#""{}"."{}" IN "#, table_name, key.as_ref()));
-                    sql.push_sql(value.to_sql());
+                    sql.push_str(format!(r#""{}"."{}""#, table_name, key.as_ref()));
+                    if let Some(v_sql) = value.to_sql() {
+                        sql.push_str(" IN ").push_sql(v_sql);
+                    } else {
+                        sql.push_str(" IS NULL");
+                    }
                 }
                 _ => {
-                    sql.push_str(format!(r#""{}"."{}" = "#, table_name, key.as_ref()));
-                    sql.push_sql(value.to_sql());
+                    sql.push_str(format!(r#""{}"."{}""#, table_name, key.as_ref()));
+                    if let Some(v_sql) = value.to_sql() {
+                        sql.push_str(" = ").push_sql(v_sql);
+                    } else {
+                        sql.push_str(" IS NULL");
+                    }
                 }
             }
             filter_or.sqls.push(sql);
@@ -256,10 +280,10 @@ impl<M: ArelModel> Filter<M> {
     /// impl ArelModel for User {}
     /// let mut filter = Filter::<User>::new();
     /// filter.filter_or_not("username", "sanmu");
-    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" != "sanmu")"#);
+    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" != ?{"String":"sanmu"})"#);
     ///
     /// filter.filter_or_not("aga", vec![18, 20]);
-    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" != "sanmu") OR ("user"."aga" NOT IN (18,20))"#);
+    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" != ?{"String":"sanmu"}) OR ("user"."aga" NOT IN (18,20))"#);
     ///
     /// ```
     pub fn filter_or_not<K: AsRef<str>, V: Into<crate::Value>>(&mut self, key: K, value: V) -> &mut Self {
@@ -273,12 +297,20 @@ impl<M: ArelModel> Filter<M> {
             let value: crate::Value = value.into();
             match &value {
                 crate::Value::Array(_) => {
-                    sql.push_str(format!(r#""{}"."{}" NOT IN "#, table_name, key.as_ref()));
-                    sql.push_sql(value.to_sql());
+                    sql.push_str(format!(r#""{}"."{}""#, table_name, key.as_ref()));
+                    if let Some(v_sql) = value.to_sql() {
+                        sql.push_str(" NOT IN ").push_sql(v_sql);
+                    } else {
+                        sql.push_str(" IS NOT NULL");
+                    }
                 }
                 _ => {
-                    sql.push_str(format!(r#""{}"."{}" != "#, table_name, key.as_ref()));
-                    sql.push_sql(value.to_sql());
+                    sql.push_str(format!(r#""{}"."{}""#, table_name, key.as_ref()));
+                    if let Some(v_sql) = value.to_sql() {
+                        sql.push_str(" != ").push_sql(v_sql);
+                    } else {
+                        sql.push_str(" IS NOT NULL");
+                    }
                 }
             }
             filter_or.sqls.push(sql);
@@ -306,7 +338,7 @@ impl<M: ArelModel> Filter<M> {
     /// let mut filter = Filter::<User>::new();
     /// filter.filter_and_pairs(vec![("username", Into::<arel::Value>::into("sanmu")), ("age", Into::<arel::Value>::into(vec![18, 20]))]);
     /// filter.unfilter("age");
-    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = "sanmu")"#);
+    /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = ?{"String":"sanmu"})"#);
     ///
     /// ```
     pub fn unfilter<K: ToString>(&mut self, key: K) -> &mut Self {
@@ -333,23 +365,23 @@ mod tests {
 
         let mut filter_and = FilterAnd::default();
         filter_and.sqls.push(crate::Sql::new_with_prepares("name = ?", vec!["sanmu"]));
-        assert_eq!(filter_and.to_sql().unwrap().to_sql_string().unwrap(), r#"name = ?"sanmu""#);
+        assert_eq!(filter_and.to_sql().unwrap().to_sql_string().unwrap(), r#"name = ?{"String":"sanmu"}"#);
         filter_and.sqls.push(crate::Sql::new_with_prepares("age = ?", vec![18]));
-        assert_eq!(filter_and.to_sql().unwrap().to_sql_string().unwrap(), r#"name = ?"sanmu" AND age = ?18"#);
+        assert_eq!(filter_and.to_sql().unwrap().to_sql_string().unwrap(), r#"name = ?{"String":"sanmu"} AND age = ?{"Int":18}"#);
         filter.sub_filters.push(Box::new(filter_and));
         assert!(filter.to_sql().is_some());
-        assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"(name = ?"sanmu" AND age = ?18)"#);
+        assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"(name = ?{"String":"sanmu"} AND age = ?{"Int":18})"#);
 
         let mut filter_or = FilterOr::default();
         filter_or.sqls.push(crate::Sql::new_with_prepares("name = ?", vec!["sanmu"]));
-        assert_eq!(filter_or.to_sql().unwrap().to_sql_string().unwrap(), r#"name = ?"sanmu""#);
+        assert_eq!(filter_or.to_sql().unwrap().to_sql_string().unwrap(), r#"name = ?{"String":"sanmu"}"#);
         filter_or.sqls.push(crate::Sql::new_with_prepares("age = ?", vec![18]));
-        assert_eq!(filter_or.to_sql().unwrap().to_sql_string().unwrap(), r#"name = ?"sanmu" OR age = ?18"#);
+        assert_eq!(filter_or.to_sql().unwrap().to_sql_string().unwrap(), r#"name = ?{"String":"sanmu"} OR age = ?{"Int":18}"#);
         filter.sub_filters.push(Box::new(filter_or));
         assert!(filter.to_sql().is_some());
         assert_eq!(
             filter.to_sql().unwrap().to_sql_string().unwrap(),
-            r#"(name = ?"sanmu" AND age = ?18) OR (name = ?"sanmu" OR age = ?18)"#
+            r#"(name = ?{"String":"sanmu"} AND age = ?{"Int":18}) OR (name = ?{"String":"sanmu"} OR age = ?{"Int":18})"#
         );
 
         // bytes
@@ -363,6 +395,6 @@ mod tests {
         let bytes: Vec<crate::Value> = vec![18.into(), 19.into(), 20.into()];
         let bytes_value: crate::Value = bytes.into();
         filter_and.sqls.push(crate::Sql::new_with_prepares("age IN ?", vec![bytes_value]));
-        assert_eq!(filter_and.to_sql().unwrap().to_sql_string().unwrap(), r#"age IN ?(18,19,20)"#);
+        assert_eq!(filter_and.to_sql().unwrap().to_sql_string().unwrap(), r#"age IN ?{"Array":[{"Int":18},{"Int":19},{"Int":20}]}"#);
     }
 }

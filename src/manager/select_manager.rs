@@ -343,7 +343,7 @@ impl<M: ArelModel> SelectManager<M> {
 }
 
 impl<M: ArelModel> SelectManager<M> {
-    pub fn to_query_builder<'a>(&self) -> anyhow::Result<sqlx::QueryBuilder<'a, crate::Database>> {
+    pub fn to_query_builder<'a>(&self) -> anyhow::Result<crate::sql::QueryBuilder<'a>> {
         self.to_sql().to_query_builder()
     }
     pub async fn fetch_one(&self) -> anyhow::Result<crate::DatabaseRow> {
@@ -383,36 +383,39 @@ mod tests {
 
         let mut select_manager = SelectManager::<User>::default();
         select_manager.r#where("name", "sanmu");
-        assert_eq!(select_manager.to_sql().to_sql_string().unwrap(), r#"SELECT "user".* FROM "user" WHERE ("user"."name" = "sanmu")"#);
+        assert_eq!(
+            select_manager.to_sql().to_sql_string().unwrap(),
+            r#"SELECT "user".* FROM "user" WHERE ("user"."name" = ?{"String":"sanmu"})"#
+        );
         select_manager.group(vec!["name", "age"]);
         assert_eq!(
             select_manager.to_sql().to_sql_string().unwrap(),
-            r#"SELECT "user".* FROM "user" WHERE ("user"."name" = "sanmu") GROUP BY "user"."name", "user"."age""#
+            r#"SELECT "user".* FROM "user" WHERE ("user"."name" = ?{"String":"sanmu"}) GROUP BY "user"."name", "user"."age""#
         );
         select_manager.having("age", 18);
         assert_eq!(
             select_manager.to_sql().to_sql_string().unwrap(),
-            r#"SELECT "user".* FROM "user" WHERE ("user"."name" = "sanmu") GROUP BY "user"."name", "user"."age" HAVING ("user"."age" = 18)"#
+            r#"SELECT "user".* FROM "user" WHERE ("user"."name" = ?{"String":"sanmu"}) GROUP BY "user"."name", "user"."age" HAVING ("user"."age" = 18)"#
         );
         select_manager.order("age", crate::SortType::Asc);
         assert_eq!(
             select_manager.to_sql().to_sql_string().unwrap(),
-            r#"SELECT "user".* FROM "user" WHERE ("user"."name" = "sanmu") GROUP BY "user"."name", "user"."age" HAVING ("user"."age" = 18) ORDER BY "user"."age" ASC"#
+            r#"SELECT "user".* FROM "user" WHERE ("user"."name" = ?{"String":"sanmu"}) GROUP BY "user"."name", "user"."age" HAVING ("user"."age" = 18) ORDER BY "user"."age" ASC"#
         );
         select_manager.limit(10);
         assert_eq!(
             select_manager.to_sql().to_sql_string().unwrap(),
-            r#"SELECT "user".* FROM "user" WHERE ("user"."name" = "sanmu") GROUP BY "user"."name", "user"."age" HAVING ("user"."age" = 18) ORDER BY "user"."age" ASC LIMIT 10"#
+            r#"SELECT "user".* FROM "user" WHERE ("user"."name" = ?{"String":"sanmu"}) GROUP BY "user"."name", "user"."age" HAVING ("user"."age" = 18) ORDER BY "user"."age" ASC LIMIT 10"#
         );
         select_manager.offset(0);
         assert_eq!(
             select_manager.to_sql().to_sql_string().unwrap(),
-            r#"SELECT "user".* FROM "user" WHERE ("user"."name" = "sanmu") GROUP BY "user"."name", "user"."age" HAVING ("user"."age" = 18) ORDER BY "user"."age" ASC LIMIT 10 OFFSET 0"#
+            r#"SELECT "user".* FROM "user" WHERE ("user"."name" = ?{"String":"sanmu"}) GROUP BY "user"."name", "user"."age" HAVING ("user"."age" = 18) ORDER BY "user"."age" ASC LIMIT 10 OFFSET 0"#
         );
         select_manager.lock();
         assert_eq!(
             select_manager.to_sql().to_sql_string().unwrap(),
-            r#"SELECT "user".* FROM "user" WHERE ("user"."name" = "sanmu") GROUP BY "user"."name", "user"."age" HAVING ("user"."age" = 18) ORDER BY "user"."age" ASC LIMIT 10 OFFSET 0 FOR UPDATE"#
+            r#"SELECT "user".* FROM "user" WHERE ("user"."name" = ?{"String":"sanmu"}) GROUP BY "user"."name", "user"."age" HAVING ("user"."age" = 18) ORDER BY "user"."age" ASC LIMIT 10 OFFSET 0 FOR UPDATE"#
         );
     }
 }

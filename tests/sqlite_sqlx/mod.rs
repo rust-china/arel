@@ -31,8 +31,8 @@ async fn init_db() -> anyhow::Result<()> {
     User::with_transaction(|tx| {
         Box::pin(async move {
             // let inner_tx = tx.begin().await?;
-            for entry in 0i32..100 {
-                sqlx::query("INSERT INTO user (name) VALUES ($2)").bind(format!("name-{}", entry)).execute(tx.as_mut()).await?;
+            for entry in 1i32..=100 {
+                sqlx::query("INSERT INTO user (name) VALUES ($1)").bind(format!("name-{}", entry)).execute(tx.as_mut()).await?;
             }
             Ok(None)
         })
@@ -43,8 +43,8 @@ async fn init_db() -> anyhow::Result<()> {
     let _ = User::with_transaction(|tx| {
         Box::pin(async move {
             // let inner_tx = tx.begin().await?;
-            for entry in 1000i32..200 {
-                sqlx::query("INSERT INTO user (name) VALUES ($2)").bind(format!("name-{}", entry)).execute(tx.as_mut()).await?;
+            for entry in 101i32..=200 {
+                sqlx::query("INSERT INTO user (name) VALUES ($1)").bind(format!("name-{}", entry)).execute(tx.as_mut()).await?;
             }
             Err(anyhow::anyhow!("rollback"))
         })
@@ -92,6 +92,12 @@ mod tests {
         let users: Vec<User> = User::query().paginate(2, 10).fetch_all_as().await?;
         assert_eq!(users.len(), 10);
         assert_eq!(users[0].id, 11);
+
+        let user: User = User::query().r#where("name", "name-5").fetch_one_as().await?;
+        assert_eq!(user.id, 5);
+
+        let users: Vec<User> = User::query().r#where("name", vec!["name-5", "name-6"]).fetch_all_as().await?;
+        assert_eq!(users.len(), 2);
 
         Ok(())
     }

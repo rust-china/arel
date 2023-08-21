@@ -185,111 +185,140 @@ impl Value {
     /// use chrono::{TimeZone};
     ///
     /// let value: Value = true.into();
-    /// assert_eq!(value.to_sql().to_sql_string().unwrap(), "1");
+    /// assert_eq!(value.to_sql().unwrap().to_sql_string().unwrap(), "1");
     ///
     /// let value: Value = false.into();
-    /// assert_eq!(value.to_sql().to_sql_string().unwrap(), "0");
+    /// assert_eq!(value.to_sql().unwrap().to_sql_string().unwrap(), "0");
     ///
     /// let value: Value = 0.into();
-    /// assert_eq!(value.to_sql().to_sql_string().unwrap(), "0");
+    /// assert_eq!(value.to_sql().unwrap().to_sql_string().unwrap(), "0");
     ///
     /// let value: Value = 0.1.into();
-    /// assert_eq!(value.to_sql().to_sql_string().unwrap(), "0.1");
+    /// assert_eq!(value.to_sql().unwrap().to_sql_string().unwrap(), "0.1");
     ///
     /// let value: Value = bytes::Bytes::from_static(b"hello").into();
-    /// assert_eq!(value.to_sql().to_sql_string().unwrap(), r#"?b"hello""#);
+    /// assert_eq!(value.to_sql().unwrap().to_sql_string().unwrap(), r#"?b"hello""#);
     ///
     /// let value: Value = vec![1, 2, 3].into();
-    /// assert_eq!(value.to_sql().to_sql_string().unwrap(), "(1,2,3)");
+    /// assert_eq!(value.to_sql().unwrap().to_sql_string().unwrap(), "(1,2,3)");
     ///
     /// let json: serde_json::Value = serde_json::from_str(r#"{"hello":"world"}"#).unwrap();
     /// let value: Value = json.into();
-    /// assert_eq!(value.to_sql().to_sql_string().unwrap(), r#"{"hello":"world"}"#);
+    /// assert_eq!(value.to_sql().unwrap().to_sql_string().unwrap(), r#"?{"String":"{\"hello\":\"world\"}"}"#);
     ///
     /// let utc_time = chrono::Utc.with_ymd_and_hms(2023, 12, 31, 0, 0, 0).unwrap();
     /// let value: Value = utc_time.into();
-    /// assert_eq!(value.to_sql().to_sql_string().unwrap(), r#"2023-12-31 00:00:00 +00:00"#);
+    /// assert_eq!(value.to_sql().unwrap().to_sql_string().unwrap(), r#"?{"String":"2023-12-31 00:00:00 +00:00"}"#);
     /// ```
-    pub fn to_sql(&self) -> crate::Sql {
+    pub fn to_sql(&self) -> Option<crate::Sql> {
         let raw_sql_string = match self {
             Value::Bool(val) => match val {
                 Some(v) => {
                     if *v {
-                        crate::Sql::new("1")
+                        Some(crate::Sql::new("1"))
                     } else {
-                        crate::Sql::new("0")
+                        Some(crate::Sql::new("0"))
                     }
                 }
-                None => crate::Sql::new("NULL"),
+                None => None,
             },
             Value::TinyInt(val) => match val {
-                Some(v) => crate::Sql::new(format!("{}", v)),
-                None => crate::Sql::new("NULL"),
+                Some(v) => Some(crate::Sql::new(format!("{}", v))),
+                None => None,
             },
             Value::SmallInt(val) => match val {
-                Some(v) => crate::Sql::new(format!("{}", v)),
-                None => crate::Sql::new("NULL"),
+                Some(v) => Some(crate::Sql::new(format!("{}", v))),
+                None => None,
             },
             Value::Int(val) => match val {
-                Some(v) => crate::Sql::new(format!("{}", v)),
-                None => crate::Sql::new("null"),
+                Some(v) => Some(crate::Sql::new(format!("{}", v))),
+                None => None,
             },
             Value::BigInt(val) => match val {
-                Some(v) => crate::Sql::new(format!("{}", v)),
-                None => crate::Sql::new("NULL"),
+                Some(v) => Some(crate::Sql::new(format!("{}", v))),
+                None => None,
             },
             Value::TinyUnsigned(val) => match val {
-                Some(v) => crate::Sql::new(format!("{}", v)),
-                None => crate::Sql::new("NULL"),
+                Some(v) => Some(crate::Sql::new(format!("{}", v))),
+                None => None,
             },
             Value::SmallUnsigned(val) => match val {
-                Some(v) => crate::Sql::new(format!("{}", v)),
-                None => crate::Sql::new("NULL"),
+                Some(v) => Some(crate::Sql::new(format!("{}", v))),
+                None => None,
             },
             Value::Unsigned(val) => match val {
-                Some(v) => crate::Sql::new(format!("{}", v)),
-                None => crate::Sql::new("NULL"),
+                Some(v) => Some(crate::Sql::new(format!("{}", v))),
+                None => None,
             },
             Value::BigUnsigned(val) => match val {
-                Some(v) => crate::Sql::new(format!("{}", v)),
-                None => crate::Sql::new("NULL"),
+                Some(v) => Some(crate::Sql::new(format!("{}", v))),
+                None => None,
             },
             Value::Float(val) => match val {
-                Some(v) => crate::Sql::new(format!("{}", v)),
-                None => crate::Sql::new("NULL"),
+                Some(v) => Some(crate::Sql::new(format!("{}", v))),
+                None => None,
             },
             Value::Double(val) => match val {
-                Some(v) => crate::Sql::new(format!("{}", v)),
-                None => crate::Sql::new("NULL"),
+                Some(v) => Some(crate::Sql::new(format!("{}", v))),
+                None => None,
             },
             Value::Char(val) => match val {
-                Some(v) => crate::Sql::new(format!("'{}'", v)),
-                None => crate::Sql::new("NULL"),
+                Some(v) => {
+                    let mut sql = crate::Sql::default();
+                    sql.push_str_with_prepare_value(sql.prepare_symbol(), *v);
+                    Some(sql)
+                }
+                None => None,
             },
             Value::String(val) => match val {
-                Some(v) => crate::Sql::new(format!(r#""{}""#, v)),
-                None => crate::Sql::new("NULL"),
+                Some(v) => {
+                    let mut sql = crate::Sql::default();
+                    sql.push_str_with_prepare_value(sql.prepare_symbol(), v.to_string());
+                    Some(sql)
+                }
+                None => None,
             },
             Value::Bytes(val) => match val {
-                Some(v) => crate::Sql::new_with_prepare("?", bytes::Bytes::copy_from_slice(v)),
-                None => crate::Sql::new("NULL"),
+                Some(v) => {
+                    let mut sql = crate::Sql::default();
+                    sql.push_str_with_prepare_value(sql.prepare_symbol(), bytes::Bytes::copy_from_slice(v));
+                    Some(sql)
+                }
+                None => None,
             },
             Value::Array(val) => match val {
                 Some(vec) => {
-                    let vec: Vec<String> = vec.iter().map(|v| v.to_sql().value).collect();
-                    crate::Sql::new(format!("({})", vec.join(",")))
+                    let mut sql = crate::Sql::new("(");
+                    let vec_sqls: Vec<crate::Sql> = vec.iter().filter_map(|v| v.to_sql()).collect();
+                    let vec_sqls_len = vec.len();
+                    for (idx, v_sql) in vec_sqls.into_iter().enumerate() {
+                        sql.push_sql(v_sql);
+                        if idx < vec_sqls_len - 1 {
+                            sql.push(',');
+                        }
+                    }
+                    sql.push(')');
+                    Some(sql)
                 }
-                None => crate::Sql::new("NULL"),
+                None => None,
             },
             #[cfg(feature = "with-json")]
             Value::Json(val) => match val {
-                Some(v) => crate::Sql::new(serde_json::to_string(v).unwrap()),
-                None => crate::Sql::new("NULL"),
+                Some(v) => {
+                    let mut sql = crate::Sql::default();
+                    sql.push_str_with_prepare_value(sql.prepare_symbol(), serde_json::to_string(v).unwrap());
+                    Some(sql)
+                }
+                None => None,
             },
             #[cfg(feature = "with-chrono")]
             Value::ChronoDateTime(val) => match val {
-                Some(v) => crate::Sql::new(format!("{}", v)),
-                None => crate::Sql::new(String::from("NULL")),
+                Some(v) => {
+                    let mut sql = crate::Sql::default();
+                    sql.push_str_with_prepare_value(sql.prepare_symbol(), format!("{}", v));
+                    Some(sql)
+                }
+                None => None,
             },
         };
         raw_sql_string

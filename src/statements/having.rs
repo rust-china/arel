@@ -51,6 +51,6 @@ mod tests {
 
         let mut having = Having::<User>::new();
         having.filter_and("username", "sanmu");
-        assert_eq!(having.to_sql().unwrap().to_sql_string().unwrap(), r#"HAVING ("user"."username" = "sanmu")"#);
+        assert_eq!(having.to_sql().unwrap().to_sql_string().unwrap(), r#"HAVING ("user"."username" = ?{"String":"sanmu"})"#);
     }
 }

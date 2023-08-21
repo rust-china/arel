@@ -11,5 +11,5 @@
 
 ```Cargo.toml
 # db features: sqlite|postgres|mysql
-arel = { version = "0.1", features = ["sqlite", "runtime-tokio", "tls-rustls"] }
+arel = { version = "0.2", features = ["runtime-tokio", "tls-rustls", "sqlite"] }
 ```
