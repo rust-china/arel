@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use std::ops::RangeBounds;
 
 #[derive(Debug)]
-pub struct SelectManager<M: ArelModel> {
+pub struct SelectManager<M: Arel> {
     select: crate::statements::select::Select<M>,
     join: Option<crate::statements::join::Join<M>>,
     r#where: Option<crate::statements::r#where::Where<M>>,
@@ -16,7 +16,7 @@ pub struct SelectManager<M: ArelModel> {
     _marker: PhantomData<M>,
 }
 
-impl<M: ArelModel> Default for SelectManager<M> {
+impl<M: Arel> Default for SelectManager<M> {
     fn default() -> Self {
         Self {
             select: crate::statements::select::Select::<M>::default(),
@@ -33,17 +33,15 @@ impl<M: ArelModel> Default for SelectManager<M> {
     }
 }
 
-impl<M: ArelModel> SelectManager<M> {
+impl<M: Arel> SelectManager<M> {
     /// # Examples
     ///
     /// ```
     /// use arel::prelude::*;
     /// use arel::manager::SelectManager;
-    /// #[derive(sqlx::FromRow)]
+    /// #[arel]
     /// struct User {}
-    /// impl ArelBase for User {}
-    /// impl ArelRecord for User {}
-    /// impl ArelModel for User {}
+    /// impl Arel for User {}
     /// let mut select_manager = SelectManager::<User>::default();
     /// assert_eq!(select_manager.to_sql().to_sql_string().unwrap(), r#"SELECT "user".* FROM "user""#);
     ///
@@ -61,11 +59,9 @@ impl<M: ArelModel> SelectManager<M> {
     /// ```
     /// use arel::prelude::*;
     /// use arel::manager::SelectManager;
-    /// #[derive(sqlx::FromRow)]
+    /// #[arel]
     /// struct User {}
-    /// impl ArelBase for User {}
-    /// impl ArelRecord for User {}
-    /// impl ArelModel for User {}
+    /// impl Arel for User {}
     /// let mut select_manager = SelectManager::<User>::default();
     /// select_manager.select_sql("COUNT(*)");
     /// assert_eq!(select_manager.to_sql().to_sql_string().unwrap(), r#"SELECT COUNT(*) FROM "user""#);
@@ -81,11 +77,9 @@ impl<M: ArelModel> SelectManager<M> {
     /// ```
     /// use arel::prelude::*;
     /// use arel::manager::SelectManager;
-    /// #[derive(sqlx::FromRow)]
+    /// #[arel]
     /// struct User {}
-    /// impl ArelBase for User {}
-    /// impl ArelRecord for User {}
-    /// impl ArelModel for User {}
+    /// impl Arel for User {}
     /// let mut select_manager = SelectManager::<User>::default();
     /// select_manager.distinct();
     /// assert_eq!(select_manager.to_sql().to_sql_string().unwrap(), r#"SELECT DISTINCT "user".* FROM "user""#);
@@ -100,21 +94,17 @@ impl<M: ArelModel> SelectManager<M> {
     /// ```
     /// use arel::prelude::*;
     /// use arel::manager::SelectManager;
-    /// #[derive(sqlx::FromRow)]
+    /// #[arel]
     /// struct User {}
-    /// impl ArelBase for User {}
-    /// impl ArelRecord for User {}
-    /// impl ArelModel for User {}
-    /// #[derive(sqlx::FromRow)]
+    /// impl Arel for User {}
+    /// #[arel]
     /// struct Wallet {}
-    /// impl ArelBase for Wallet {}
-    /// impl ArelRecord for Wallet {}
-    /// impl ArelModel for Wallet {}
+    /// impl Arel for Wallet {}
     /// let mut select_manager = SelectManager::<User>::default();
     /// select_manager.join::<Wallet>(arel::JoinType::InnerJoin);
     /// assert_eq!(select_manager.to_sql().to_sql_string().unwrap(), r#"SELECT "user".* FROM "user" INNER JOIN "wallet" ON "user"."id" = "wallet"."user_id""#);
     /// ```
-    pub fn join<U: ArelModel>(&mut self, join_type: crate::JoinType) -> &mut Self {
+    pub fn join<U: Arel>(&mut self, join_type: crate::JoinType) -> &mut Self {
         if let Some(join) = &mut self.join {
             join.join::<U>(join_type);
         } else {
@@ -124,10 +114,10 @@ impl<M: ArelModel> SelectManager<M> {
         }
         self
     }
-    pub fn inner_join<U: ArelModel>(&mut self) -> &mut Self {
+    pub fn inner_join<U: Arel>(&mut self) -> &mut Self {
         self.join::<U>(crate::JoinType::InnerJoin)
     }
-    pub fn left_join<U: ArelModel>(&mut self) -> &mut Self {
+    pub fn left_join<U: Arel>(&mut self) -> &mut Self {
         self.join::<U>(crate::JoinType::LeftJoin)
     }
     /// # Examples
@@ -135,11 +125,9 @@ impl<M: ArelModel> SelectManager<M> {
     /// ```
     /// use arel::prelude::*;
     /// use arel::manager::SelectManager;
-    /// #[derive(sqlx::FromRow)]
+    /// #[arel]
     /// struct User {}
-    /// impl ArelBase for User {}
-    /// impl ArelRecord for User {}
-    /// impl ArelModel for User {}
+    /// impl Arel for User {}
     /// let mut select_manager = SelectManager::<User>::default();
     /// select_manager.join_sql("LEFT JOIN wallet on user.id = wallet.user_id");
     /// assert_eq!(select_manager.to_sql().to_sql_string().unwrap(), r#"SELECT "user".* FROM "user" LEFT JOIN wallet on user.id = wallet.user_id"#);
@@ -342,27 +330,35 @@ impl<M: ArelModel> SelectManager<M> {
     }
 }
 
-impl<M: ArelModel> SelectManager<M> {
+impl<M: Arel> SelectManager<M> {
     pub fn to_query_builder<'a>(&self) -> anyhow::Result<crate::sql::QueryBuilder<'a>> {
         self.to_sql().to_query_builder()
     }
     pub async fn fetch_one(&self) -> anyhow::Result<crate::DatabaseRow> {
         self.to_sql().fetch_one_exec(M::pool()?).await
     }
-    pub async fn fetch_one_as<T>(&self) -> anyhow::Result<T>
+    pub async fn fetch_count(&self) -> anyhow::Result<i64> {
+        let row: (i64,) = self.to_sql().fetch_one_exec_as(M::pool()?).await?;
+        Ok(row.0)
+    }
+    pub async fn fetch_one_as<T: crate::traits::ArelPersisted>(&self) -> anyhow::Result<T>
     where
         for<'b> T: Send + Unpin + sqlx::FromRow<'b, crate::DatabaseRow>,
     {
-        self.to_sql().fetch_one_exec_as(M::pool()?).await
+        let mut ret: T = self.to_sql().fetch_one_exec_as(M::pool()?).await?;
+        ret.set_persisted(true);
+        Ok(ret)
     }
     pub async fn fetch_all(&self) -> anyhow::Result<Vec<crate::DatabaseRow>> {
         self.to_sql().fetch_all_exec(M::pool()?).await
     }
-    pub async fn fetch_all_as<T>(&self) -> anyhow::Result<Vec<T>>
+    pub async fn fetch_all_as<T: crate::traits::ArelPersisted>(&self) -> anyhow::Result<Vec<T>>
     where
         for<'b> T: Send + Unpin + sqlx::FromRow<'b, crate::DatabaseRow>,
     {
-        self.to_sql().fetch_all_exec_as(M::pool()?).await
+        let mut array: Vec<T> = self.to_sql().fetch_all_exec_as(M::pool()?).await?;
+        array.iter_mut().for_each(|v| v.set_persisted(true));
+        Ok(array)
     }
 }
 
@@ -371,9 +367,8 @@ mod tests {
     use super::*;
     #[derive(sqlx::FromRow)]
     struct User {}
-    impl ArelBase for User {}
-    impl ArelRecord for User {}
-    impl ArelModel for User {}
+    impl SuperArel for User {}
+    impl Arel for User {}
 
     #[test]
     fn to_sql() {

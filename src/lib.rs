@@ -8,6 +8,7 @@ compile_error!("feature `sqlite` and `postgres` shouldn't be enabled both.");
 #[cfg(all(feature = "mysql", feature = "postgres"))]
 compile_error!("feature `mysql` and `postgres` shouldn't be enabled both.");
 pub use arel_macros::arel;
+pub use sqlx;
 
 pub mod manager;
 pub mod prelude;
@@ -17,7 +18,7 @@ pub mod traits;
 pub mod value;
 pub mod visitor;
 
-pub use crate::traits::{ArelBase, ArelModel, ArelRecord};
+pub use crate::traits::{Arel, SuperArel};
 pub use bytes::Bytes;
 pub use sql::Sql;
 pub use value::{ActiveValue, Value};

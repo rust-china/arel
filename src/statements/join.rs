@@ -1,13 +1,13 @@
-use crate::{prelude::ArelModel, statements::ArelStatement};
+use crate::{prelude::Arel, statements::ArelStatement};
 use std::marker::PhantomData;
 
 #[derive(Debug)]
-pub struct Join<M: ArelModel> {
+pub struct Join<M: Arel> {
     sqls: Vec<crate::Sql>,
     _marker: PhantomData<M>,
 }
 
-impl<M: ArelModel> ArelStatement for Join<M> {
+impl<M: Arel> ArelStatement for Join<M> {
     fn sqls(&self) -> Option<&Vec<crate::Sql>> {
         if self.sqls.len() > 0 {
             Some(&self.sqls)
@@ -31,7 +31,7 @@ impl<M: ArelModel> ArelStatement for Join<M> {
     }
 }
 
-impl<M: ArelModel> Join<M> {
+impl<M: Arel> Join<M> {
     pub fn new() -> Self {
         Self {
             sqls: vec![],
@@ -43,23 +43,20 @@ impl<M: ArelModel> Join<M> {
     /// ```
     /// use arel::prelude::*;
     /// use arel::statements::join::Join;
+    /// #[arel]
     /// struct User {}
-    /// impl ArelBase for User {}
-    /// impl ArelRecord for User {}
-    /// impl ArelModel for User {}
+    /// impl Arel for User {}
+    /// #[arel]
     /// struct Wallet {}
-    /// impl ArelBase for Wallet {}
-    /// impl ArelRecord for Wallet {}
-    /// impl ArelModel for Wallet {}
+    /// impl Arel for Wallet {}
     /// let mut join = Join::<User>::new();
     /// join.join::<Wallet>(arel::JoinType::InnerJoin);
     /// assert_eq!(join.to_sql().unwrap().to_sql_string().unwrap(), r#"INNER JOIN "wallet" ON "user"."id" = "wallet"."user_id""#);
     ///
     /// use std::borrow::Cow;
+    /// #[arel]
     /// struct Admin {}
-    /// impl ArelBase for Admin {}
-    /// impl ArelRecord for Admin {}
-    /// impl ArelModel for Admin {
+    /// impl Arel for Admin {
     ///     fn primary_keys() -> Option<Vec<Cow<'static, str>>> where Self: Sized {
     ///         Some(vec!["id".into(), "uuid".into()])
     ///     }
@@ -69,7 +66,7 @@ impl<M: ArelModel> Join<M> {
     /// assert_eq!(join.to_sql().unwrap().to_sql_string().unwrap(), r#"INNER JOIN "wallet" ON "admin"."id" = "wallet"."admin_id" AND "admin"."uuid" = "wallet"."admin_uuid""#);
     ///
     /// ```
-    pub fn join<U: ArelModel>(&mut self, join_type: crate::JoinType) -> &mut Self {
+    pub fn join<U: Arel>(&mut self, join_type: crate::JoinType) -> &mut Self {
         let m_table_name = M::table_name();
         let u_table_name = U::table_name();
         if let Some(m_primary_keys) = M::primary_keys() {
@@ -97,10 +94,9 @@ impl<M: ArelModel> Join<M> {
     /// ```
     /// use arel::prelude::*;
     /// use arel::statements::join::Join;
+    /// #[arel]
     /// struct User {}
-    /// impl ArelBase for User {}
-    /// impl ArelRecord for User {}
-    /// impl ArelModel for User {}
+    /// impl Arel for User {}
     /// let mut join = Join::<User>::new();
     /// join.join_sql("LEFT JOIN wallet ON user.id = wallet.user_id");
     /// join.join_sql("INNER JOIN order ON user.id = order.user_id");

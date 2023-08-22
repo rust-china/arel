@@ -19,13 +19,13 @@ impl Lock {
 
 #[cfg(test)]
 mod tests {
-    use crate::prelude::ArelBase;
+    use crate::prelude::SuperArel;
 
     use super::*;
     #[test]
     fn to_sql() {
         struct User {}
-        impl ArelBase for User {}
+        impl SuperArel for User {}
 
         let lock = Lock::new();
         assert_eq!(lock.to_sql().unwrap().to_sql_string().unwrap(), "FOR UPDATE");

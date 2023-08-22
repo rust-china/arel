@@ -1,13 +1,13 @@
-use crate::{prelude::ArelModel, statements::ArelStatement};
+use crate::{prelude::Arel, statements::ArelStatement};
 use std::marker::PhantomData;
 
 #[derive(Debug)]
-pub struct Order<M: ArelModel> {
+pub struct Order<M: Arel> {
     sqls: Vec<crate::Sql>,
     _marker: PhantomData<M>,
 }
 
-impl<M: ArelModel> ArelStatement for Order<M> {
+impl<M: Arel> ArelStatement for Order<M> {
     fn sqls(&self) -> Option<&Vec<crate::Sql>> {
         if self.sqls.len() > 0 {
             Some(&self.sqls)
@@ -31,16 +31,15 @@ impl<M: ArelModel> ArelStatement for Order<M> {
     }
 }
 
-impl<M: ArelModel> Order<M> {
+impl<M: Arel> Order<M> {
     /// # Examples
     ///
     /// ```
     /// use arel::prelude::*;
     /// use arel::statements::order::Order;
+    /// #[arel]
     /// struct User {}
-    /// impl ArelBase for User {}
-    /// impl ArelRecord for User {}
-    /// impl ArelModel for User {}
+    /// impl Arel for User {}
     /// let order = Order::<User>::new("name", arel::SortType::Desc);
     /// assert_eq!(order.to_sql().unwrap().to_sql_string().unwrap(), r#"ORDER BY "user"."name" DESC"#);
     ///
@@ -53,10 +52,9 @@ impl<M: ArelModel> Order<M> {
     /// ```
     /// use arel::prelude::*;
     /// use arel::statements::order::Order;
+    /// #[arel]
     /// struct User {}
-    /// impl ArelBase for User {}
-    /// impl ArelRecord for User {}
-    /// impl ArelModel for User {}
+    /// impl Arel for User {}
     /// let order = Order::<User>::new_columns(vec![("name", arel::SortType::Desc), ("age", arel::SortType::Asc)]);
     /// assert_eq!(order.to_sql().unwrap().to_sql_string().unwrap(), r#"ORDER BY "user"."name" DESC, "user"."age" ASC"#);
     ///
@@ -82,10 +80,9 @@ impl<M: ArelModel> Order<M> {
     /// ```
     /// use arel::prelude::*;
     /// use arel::statements::order::Order;
+    /// #[arel]
     /// struct User {}
-    /// impl ArelBase for User {}
-    /// impl ArelRecord for User {}
-    /// impl ArelModel for User {}
+    /// impl Arel for User {}
     /// let order = Order::<User>::new_sqls(vec!["name DESC", "age ASC"]);
     /// assert_eq!(order.to_sql().unwrap().to_sql_string().unwrap(), r#"ORDER BY name DESC, age ASC"#);
     ///

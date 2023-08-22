@@ -117,14 +117,13 @@ impl<M: ArelModel> ActiveRecord<M> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::prelude::ArelBase;
+    use crate::prelude::SuperArel;
     #[test]
     fn to_sql() {
         struct User {
             id: i32,
         }
-        impl ArelBase for User {}
-        impl ArelRecord for User {}
+        impl SuperArel for User {}
         impl ArelModel for User {}
 
         let active_record = ActiveRecord::new(User { id: 1 });

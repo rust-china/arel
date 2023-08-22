@@ -1,13 +1,13 @@
 use crate::{
-    prelude::ArelModel,
+    prelude::Arel,
     statements::{filter::Filter, ArelStatement},
 };
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug)]
-pub struct Having<M: ArelModel>(Filter<M>);
+pub struct Having<M: Arel>(Filter<M>);
 
-impl<M: ArelModel> ArelStatement for Having<M> {
+impl<M: Arel> ArelStatement for Having<M> {
     fn to_sql(&self) -> Option<crate::Sql> {
         if let Some(filter_sql) = self.0.to_sql() {
             let mut final_sql = crate::Sql::new("HAVING ");
@@ -19,19 +19,19 @@ impl<M: ArelModel> ArelStatement for Having<M> {
     }
 }
 
-impl<M: ArelModel> Deref for Having<M> {
+impl<M: Arel> Deref for Having<M> {
     type Target = Filter<M>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
-impl<M: ArelModel> DerefMut for Having<M> {
+impl<M: Arel> DerefMut for Having<M> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
-impl<M: ArelModel> Having<M> {
+impl<M: Arel> Having<M> {
     pub fn new() -> Self {
         Self(Filter::<M>::new())
     }
@@ -45,9 +45,8 @@ mod tests {
     #[test]
     fn to_sql() {
         struct User {}
-        impl ArelBase for User {}
-        impl ArelRecord for User {}
-        impl ArelModel for User {}
+        impl SuperArel for User {}
+        impl Arel for User {}
 
         let mut having = Having::<User>::new();
         having.filter_and("username", "sanmu");

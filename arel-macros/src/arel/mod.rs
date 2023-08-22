@@ -1,6 +1,6 @@
 mod arel_active_model;
 mod arel_model;
-mod arel_record;
+mod arel_trait;
 
 use proc_macro::TokenStream;
 use quote::ToTokens;
@@ -43,8 +43,8 @@ fn do_expand(input: &Input) -> syn::Result<proc_macro2::TokenStream> {
         })
         .collect::<Vec<syn::Field>>();
 
-    let arel_record_impl_table_name = arel_record::impl_table_name(input)?;
-    let arel_record_impl_primary_key_or_primary_keys = arel_record::impl_primary_key_or_primary_keys(input)?;
+    let arel_trait_impl_table_name = arel_trait::impl_table_name(input)?;
+    let arel_trait_impl_primary_key_or_primary_keys = arel_trait::impl_primary_key_or_primary_keys(input)?;
 
     let generics = &st.generics;
     let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
@@ -55,13 +55,22 @@ fn do_expand(input: &Input) -> syn::Result<proc_macro2::TokenStream> {
 
         #[derive(Clone, Debug, Default, PartialEq, sqlx::FromRow)]
         pub struct #model_name_ident #generics {
+            #[sqlx(default)]
+            pub __persisted__: bool,
             #(#model_fields),*
         }
 
-        impl #impl_generics arel::ArelBase for #model_name_ident #type_generics #where_clause {}
-        impl #impl_generics arel::ArelRecord for #model_name_ident #type_generics #where_clause {
-            #arel_record_impl_table_name
-            #arel_record_impl_primary_key_or_primary_keys
+        impl #impl_generics arel::SuperArel for #model_name_ident #type_generics #where_clause {
+            #arel_trait_impl_table_name
+            #arel_trait_impl_primary_key_or_primary_keys
+        }
+        impl #impl_generics arel::traits::ArelPersisted for #model_name_ident #type_generics #where_clause {
+            fn set_persisted(&mut self, persisted: bool) {
+                self.__persisted__ = persisted;
+            }
+            fn persited(&self) -> bool {
+                self.__persisted__
+            }
         }
 
         #arel_model

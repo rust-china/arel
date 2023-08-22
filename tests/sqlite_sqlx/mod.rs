@@ -10,7 +10,7 @@ struct User {
     lock_version: Option<i32>,
     expired_at: Option<chrono::DateTime<chrono::FixedOffset>>,
 }
-impl ArelModel for User {}
+impl Arel for User {}
 
 async fn init_db() -> anyhow::Result<()> {
     let visitor = arel::visitor::get_or_init(|| Box::pin(async { arel::DatabasePoolOptions::new().max_connections(5).connect("sqlite::memory:").await })).await?;
@@ -75,8 +75,8 @@ mod tests {
         let row = User::query().select_sql("COUNT(*) as count").fetch_one().await?;
         assert_eq!(row.try_get::<i64, _>("count")?, 100);
 
-        let row: (i64,) = User::query().select_sql("COUNT(*)").fetch_one_as().await?;
-        assert_eq!(row.0, 100);
+        let total_count = User::query().select_sql("COUNT(*)").fetch_count().await?;
+        assert_eq!(total_count, 100);
 
         let user: User = User::query().fetch_one_as().await?;
         assert_eq!(user.id, 1);

@@ -36,11 +36,13 @@ pub(crate) fn create_arel_active_model(input: &super::Input) -> syn::Result<proc
     ret_token_stream.extend(quote::quote!(
         #[derive(Clone, Debug, PartialEq)]
         pub struct #arel_active_model_ident #generics {
+            pub __persisted__: bool,
             #(pub #build_arel_active_model_fields_clauses),*
         }
         impl #impl_generics Default for #arel_active_model_ident #type_generics #where_clause {
             fn default() -> Self {
                 Self {
+                    __persisted__: false,
                     #(#build_arel_active_default_init_clauses),*
                 }
             }
@@ -59,7 +61,7 @@ fn impl_from_model(input: &super::Input) -> syn::Result<proc_macro2::TokenStream
     let generics = &st.generics;
     let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
 
-    let mut init_clauses = vec![];
+    let mut init_clauses = vec![quote::quote!(arel_active_model.__persisted__ = value.__persisted__;)];
     for field in fields.iter() {
         let ident = &field.ident;
         let r#type = &field.ty;
@@ -97,7 +99,7 @@ fn impl_from_arel_model(input: &super::Input) -> syn::Result<proc_macro2::TokenS
     let generics = &st.generics;
     let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
 
-    let mut init_clauses = vec![];
+    let mut init_clauses = vec![quote::quote!(arel_active_model.__persisted__ = value.__persisted__;)];
     for field in fields.iter() {
         let ident = &field.ident;
         // let r#type = &field.ty;

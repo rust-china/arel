@@ -8,7 +8,7 @@ pub(crate) fn create_arel_model(input: &super::Input) -> syn::Result<proc_macro2
     let fields = super::get_fields(input)?;
 
     let generics = &st.generics;
-    // let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
+    let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
 
     let mut build_arel_model_fields_clauses = vec![];
     for field in fields.iter() {
@@ -27,7 +27,17 @@ pub(crate) fn create_arel_model(input: &super::Input) -> syn::Result<proc_macro2
     ret_token_stream.extend(quote::quote!(
         #[derive(Clone, Debug, Default, PartialEq, sqlx::FromRow)]
         pub struct #arel_model_ident #generics {
+            #[sqlx(default)]
+            pub __persisted__: bool,
             #(pub #build_arel_model_fields_clauses),*
+        }
+        impl #impl_generics arel::traits::ArelPersisted for #arel_model_ident #type_generics #where_clause {
+            fn set_persisted(&mut self, persisted: bool) {
+                self.__persisted__ = persisted;
+            }
+            fn persited(&self) -> bool {
+                self.__persisted__
+            }
         }
     ));
 

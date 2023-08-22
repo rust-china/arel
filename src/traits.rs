@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::future::Future;
 use std::pin::Pin;
 ///
-/// # Examples Trait ArelBase
+/// # Examples Trait SuperArel
 ///
 /// ```
 /// use arel::prelude::*;
@@ -10,19 +10,19 @@ use std::pin::Pin;
 /// struct User {
 ///     id: i64,
 /// }
-/// impl ArelBase for User {}
+/// impl SuperArel for User {}
 ///
 ///#[derive(Debug, Default)]
 /// struct UserWallet<T: ToString> {
 ///     id: i64,
 ///     data: T,
 /// }
-/// impl<T: ToString + Default> ArelBase for UserWallet<T>  {}
+/// impl<T: ToString + Default> SuperArel for UserWallet<T>  {}
 ///
 /// assert_eq!(User::struct_name(), "User");
 /// assert_eq!(UserWallet::<String>::struct_name(), "UserWallet<alloc::string::String>");
 /// ```
-pub trait ArelBase {
+pub trait SuperArel {
     fn struct_name_full_path() -> Cow<'static, str>
     where
         Self: Sized,
@@ -42,28 +42,6 @@ pub trait ArelBase {
             .as_str();
         Cow::Owned(struct_name.to_owned())
     }
-
-    fn validates(&self) -> anyhow::Result<()> {
-        Ok(())
-    }
-    fn to_sql(&self) {
-        ()
-    }
-}
-
-/// # Examples Trait ArelRecord
-///
-/// ```
-/// use arel::prelude::*;
-///#[derive(Debug, Default, sqlx::FromRow)]
-/// struct User {
-///     id: i64,
-/// }
-/// impl ArelBase for User {}
-/// impl ArelRecord for User {}
-/// let user = User::default();
-/// assert!(user.validates().is_ok());
-pub trait ArelRecord: ArelBase + Sized {
     fn _table_name() -> Cow<'static, str>
     where
         Self: Sized,
@@ -76,18 +54,34 @@ pub trait ArelRecord: ArelBase + Sized {
             .to_lowercase();
         Cow::Owned(struct_name.into())
     }
-    fn _primary_key() -> Option<Cow<'static, str>> {
+    fn _primary_key() -> Option<Cow<'static, str>>
+    where
+        Self: Sized,
+    {
         Some("id".into())
     }
-    fn _primary_keys() -> Option<Vec<Cow<'static, str>>> {
+    fn _primary_keys() -> Option<Vec<Cow<'static, str>>>
+    where
+        Self: Sized,
+    {
         None
     }
-    fn _pool() -> anyhow::Result<&'static sqlx::Pool<crate::Database>> {
+    fn _pool() -> anyhow::Result<&'static sqlx::Pool<crate::Database>>
+    where
+        Self: Sized,
+    {
         Ok(crate::visitor::get()?.pool())
     }
+    fn validates(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
+    fn to_sql(&self) {
+        ()
+    }
 }
+
 #[async_trait::async_trait]
-pub trait ArelModel: ArelRecord {
+pub trait Arel: SuperArel + Sized {
     fn table_name() -> Cow<'static, str> {
         Self::_table_name()
     }
@@ -125,15 +119,19 @@ pub trait ArelModel: ArelRecord {
     }
 }
 
+pub trait ArelPersisted {
+    fn set_persisted(&mut self, persisted: bool);
+    fn persited(&self) -> bool;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[derive(Default, sqlx::FromRow)]
     struct User {}
-    impl ArelBase for User {}
-    impl ArelRecord for User {}
-    impl ArelModel for User {}
+    impl SuperArel for User {}
+    impl Arel for User {}
 
     #[test]
     fn it_works() {
@@ -141,7 +139,7 @@ mod tests {
         assert_eq!(query.unwrap(), r#"SELECT "user".* FROM "user""#);
 
         let user = User::default();
-        let users: Vec<&dyn ArelBase> = vec![&user];
+        let users: Vec<&dyn SuperArel> = vec![&user];
         // keep trait safe
         for user in users {
             user.to_sql();

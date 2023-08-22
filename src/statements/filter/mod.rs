@@ -6,7 +6,7 @@ pub use filter_or::FilterOr;
 use std::{fmt::Debug, marker::PhantomData};
 
 use super::ArelStatement;
-use crate::prelude::ArelModel;
+use crate::prelude::Arel;
 
 pub(crate) trait ArelSubFilterStatement: Debug {
     fn sqls(&self) -> Option<&Vec<crate::Sql>>;
@@ -39,12 +39,12 @@ pub(crate) trait ArelSubFilterStatement: Debug {
 }
 
 #[derive(Debug)]
-pub struct Filter<M: ArelModel> {
+pub struct Filter<M: Arel> {
     sub_filters: Vec<Box<dyn ArelSubFilterStatement>>,
     _marker: PhantomData<M>,
 }
 
-impl<T: ArelModel> ArelStatement for Filter<T> {
+impl<T: Arel> ArelStatement for Filter<T> {
     fn to_sql(&self) -> Option<crate::Sql> {
         let sub_filters: Vec<&Box<dyn ArelSubFilterStatement>> = self.sub_filters.iter().collect();
         if self.sub_filters.len() > 0 {
@@ -66,7 +66,7 @@ impl<T: ArelModel> ArelStatement for Filter<T> {
     }
 }
 
-impl<M: ArelModel> Filter<M> {
+impl<M: Arel> Filter<M> {
     pub fn new() -> Self {
         Self {
             sub_filters: vec![],
@@ -78,10 +78,9 @@ impl<M: ArelModel> Filter<M> {
     /// ```
     /// use arel::prelude::*;
     /// use arel::statements::filter::Filter;
+    /// #[arel]
     /// struct User {}
-    /// impl ArelBase for User {}
-    /// impl ArelRecord for User {}
-    /// impl ArelModel for User {}
+    /// impl Arel for User {}
     /// let mut filter = Filter::<User>::new();
     /// filter.filter_and("username", "sanmu");
     /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = ?{"String":"sanmu"})"#);
@@ -98,10 +97,9 @@ impl<M: ArelModel> Filter<M> {
     /// ```
     /// use arel::prelude::*;
     /// use arel::statements::filter::Filter;
+    /// #[arel]
     /// struct User {}
-    /// impl ArelBase for User {}
-    /// impl ArelRecord for User {}
-    /// impl ArelModel for User {}
+    /// impl Arel for User {}
     /// let mut filter = Filter::<User>::new();
     /// filter.filter_and_pairs(vec![("username", Into::<arel::Value>::into("sanmu")), ("age", Into::<arel::Value>::into(vec![18, 20]))]);
     /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = ?{"String":"sanmu"} AND "user"."age" IN (18,20))"#);
@@ -150,10 +148,9 @@ impl<M: ArelModel> Filter<M> {
     /// ```
     /// use arel::prelude::*;
     /// use arel::statements::filter::Filter;
+    /// #[arel]
     /// struct User {}
-    /// impl ArelBase for User {}
-    /// impl ArelRecord for User {}
-    /// impl ArelModel for User {}
+    /// impl Arel for User {}
     /// let mut filter = Filter::<User>::new();
     /// filter.filter_and_not("username", "sanmu");
     /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" != ?{"String":"sanmu"})"#);
@@ -199,10 +196,9 @@ impl<M: ArelModel> Filter<M> {
     /// ```
     /// use arel::prelude::*;
     /// use arel::statements::filter::Filter;
+    /// #[arel]
     /// struct User {}
-    /// impl ArelBase for User {}
-    /// impl ArelRecord for User {}
-    /// impl ArelModel for User {}
+    /// impl Arel for User {}
     /// let mut filter = Filter::<User>::new();
     /// filter.filter_or("username", "sanmu");
     /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = ?{"String":"sanmu"})"#);
@@ -222,10 +218,9 @@ impl<M: ArelModel> Filter<M> {
     /// ```
     /// use arel::prelude::*;
     /// use arel::statements::filter::Filter;
+    /// #[arel]
     /// struct User {}
-    /// impl ArelBase for User {}
-    /// impl ArelRecord for User {}
-    /// impl ArelModel for User {}
+    /// impl Arel for User {}
     /// let mut filter = Filter::<User>::new();
     /// filter.filter_or_pairs(vec![("username", Into::<arel::Value>::into("sanmu")), ("age", Into::<arel::Value>::into(vec![18, 20]))]);
     /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" = ?{"String":"sanmu"} OR "user"."age" IN (18,20))"#);
@@ -274,10 +269,9 @@ impl<M: ArelModel> Filter<M> {
     /// ```
     /// use arel::prelude::*;
     /// use arel::statements::filter::Filter;
+    /// #[arel]
     /// struct User {}
-    /// impl ArelBase for User {}
-    /// impl ArelRecord for User {}
-    /// impl ArelModel for User {}
+    /// impl Arel for User {}
     /// let mut filter = Filter::<User>::new();
     /// filter.filter_or_not("username", "sanmu");
     /// assert_eq!(filter.to_sql().unwrap().to_sql_string().unwrap(), r#"("user"."username" != ?{"String":"sanmu"})"#);
@@ -331,10 +325,9 @@ impl<M: ArelModel> Filter<M> {
     /// ```
     /// use arel::prelude::*;
     /// use arel::statements::filter::Filter;
+    /// #[arel]
     /// struct User {}
-    /// impl ArelBase for User {}
-    /// impl ArelRecord for User {}
-    /// impl ArelModel for User {}
+    /// impl Arel for User {}
     /// let mut filter = Filter::<User>::new();
     /// filter.filter_and_pairs(vec![("username", Into::<arel::Value>::into("sanmu")), ("age", Into::<arel::Value>::into(vec![18, 20]))]);
     /// filter.unfilter("age");
@@ -354,9 +347,8 @@ mod tests {
     use crate::prelude::*;
 
     struct User {}
-    impl ArelBase for User {}
-    impl ArelRecord for User {}
-    impl ArelModel for User {}
+    impl SuperArel for User {}
+    impl Arel for User {}
 
     #[test]
     fn it_works() {
