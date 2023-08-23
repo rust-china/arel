@@ -99,6 +99,28 @@ mod tests {
         let users: Vec<User> = User::query().r#where("name", vec!["name-5", "name-6"]).fetch_all_as().await?;
         assert_eq!(users.len(), 2);
 
+        let user: User = User::query().r#where("id", 2).fetch_one_as().await?;
+        assert_eq!(user.id, 2);
+        // update
+        let mut active_user: ArelActiveUser = user.into();
+        active_user.name.set("user2".into());
+        let ret = active_user.save().await?;
+        assert_eq!(ret.rows_affected(), 1);
+        let user: User = User::query().r#where("id", 2).fetch_one_as().await?;
+        assert_eq!(user.name, "user2");
+
+        // delete
+        let ret = active_user.destroy().await?;
+        assert_eq!(ret.rows_affected(), 1);
+        let total_count = User::query().select_sql("COUNT(*)").fetch_count().await?;
+        assert_eq!(total_count, 99);
+
+        // insert
+        let ret = active_user.save().await?;
+        assert_eq!(ret.rows_affected(), 1);
+        let total_count = User::query().select_sql("COUNT(*)").fetch_count().await?;
+        assert_eq!(total_count, 100);
+
         Ok(())
     }
 }
