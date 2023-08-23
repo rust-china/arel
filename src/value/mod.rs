@@ -41,9 +41,19 @@ impl From<bool> for Value {
         Value::Bool(Some(val))
     }
 }
+impl From<&bool> for Value {
+    fn from(val: &bool) -> Value {
+        Value::Bool(Some(*val))
+    }
+}
 impl From<i8> for Value {
     fn from(val: i8) -> Value {
         Value::TinyInt(Some(val))
+    }
+}
+impl From<&i8> for Value {
+    fn from(val: &i8) -> Value {
+        Value::TinyInt(Some(*val))
     }
 }
 impl From<i16> for Value {
@@ -51,9 +61,19 @@ impl From<i16> for Value {
         Value::SmallInt(Some(val))
     }
 }
+impl From<&i16> for Value {
+    fn from(val: &i16) -> Value {
+        Value::SmallInt(Some(*val))
+    }
+}
 impl From<i32> for Value {
     fn from(val: i32) -> Value {
         Value::Int(Some(val))
+    }
+}
+impl From<&i32> for Value {
+    fn from(val: &i32) -> Value {
+        Value::Int(Some(*val))
     }
 }
 impl From<i64> for Value {
@@ -61,9 +81,19 @@ impl From<i64> for Value {
         Value::BigInt(Some(val))
     }
 }
+impl From<&i64> for Value {
+    fn from(val: &i64) -> Value {
+        Value::BigInt(Some(*val))
+    }
+}
 impl From<u8> for Value {
     fn from(val: u8) -> Value {
         Value::TinyUnsigned(Some(val))
+    }
+}
+impl From<&u8> for Value {
+    fn from(val: &u8) -> Value {
+        Value::TinyUnsigned(Some(*val))
     }
 }
 impl From<u16> for Value {
@@ -71,9 +101,19 @@ impl From<u16> for Value {
         Value::SmallUnsigned(Some(val))
     }
 }
+impl From<&u16> for Value {
+    fn from(val: &u16) -> Value {
+        Value::SmallUnsigned(Some(*val))
+    }
+}
 impl From<u32> for Value {
     fn from(val: u32) -> Value {
         Value::Unsigned(Some(val))
+    }
+}
+impl From<&u32> for Value {
+    fn from(val: &u32) -> Value {
+        Value::Unsigned(Some(*val))
     }
 }
 impl From<u64> for Value {
@@ -81,9 +121,19 @@ impl From<u64> for Value {
         Value::BigUnsigned(Some(val))
     }
 }
+impl From<&u64> for Value {
+    fn from(val: &u64) -> Value {
+        Value::BigUnsigned(Some(*val))
+    }
+}
 impl From<f32> for Value {
     fn from(val: f32) -> Value {
         Value::Float(Some(val))
+    }
+}
+impl From<&f32> for Value {
+    fn from(val: &f32) -> Value {
+        Value::Float(Some(*val))
     }
 }
 impl From<f64> for Value {
@@ -91,12 +141,21 @@ impl From<f64> for Value {
         Value::Double(Some(val))
     }
 }
+impl From<&f64> for Value {
+    fn from(val: &f64) -> Value {
+        Value::Double(Some(*val))
+    }
+}
 impl From<char> for Value {
     fn from(val: char) -> Value {
         Value::Char(Some(val))
     }
 }
-
+impl From<&char> for Value {
+    fn from(val: &char) -> Value {
+        Value::Char(Some(*val))
+    }
+}
 impl From<&str> for Value {
     fn from(val: &str) -> Value {
         let string: String = val.into();
@@ -182,6 +241,7 @@ impl Value {
     ///
     /// ```
     /// use arel::prelude::*;
+    /// use arel::Value;
     /// use chrono::{TimeZone};
     ///
     /// let value: Value = true.into();

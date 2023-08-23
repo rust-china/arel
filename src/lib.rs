@@ -18,7 +18,7 @@ pub mod traits;
 pub mod value;
 pub mod visitor;
 
-pub use crate::traits::{Arel, SuperArel};
+pub use crate::traits::{Arel, ArelPersisted, SuperArel};
 pub use bytes::Bytes;
 pub use sql::Sql;
 pub use value::{ActiveValue, Value};
@@ -32,6 +32,8 @@ pub type DatabasePool = sqlx::sqlite::SqlitePool;
 #[cfg(feature = "sqlite")]
 pub type DatabaseRow = sqlx::sqlite::SqliteRow;
 #[cfg(feature = "sqlite")]
+pub type DatabaseQueryResult = sqlx::sqlite::SqliteQueryResult;
+#[cfg(feature = "sqlite")]
 pub type DatabasePoolOptions = sqlx::sqlite::SqlitePoolOptions;
 
 #[cfg(feature = "mysql")]
@@ -43,6 +45,8 @@ pub type DatabasePool = sqlx::mysql::MySqlPool;
 #[cfg(feature = "mysql")]
 pub type DatabaseRow = sqlx::mysql::MySqlRow;
 #[cfg(feature = "mysql")]
+pub type DatabaseQueryResult = sqlx::mysql::MySqlQueryResult;
+#[cfg(feature = "mysql")]
 pub type DatabasePoolOptions = sqlx::mysql::MySqlPoolOptions;
 
 #[cfg(feature = "postgres")]
@@ -53,6 +57,8 @@ pub type DatabaseConnection = sqlx::postgres::PgConnection;
 pub type DatabasePool = sqlx::PgPool;
 #[cfg(feature = "postgres")]
 pub type DatabaseRow = sqlx::postgres::PgRow;
+#[cfg(feature = "postgres")]
+pub type DatabaseQueryResult = sqlx::postgres::PgQueryResult;
 #[cfg(feature = "postgres")]
 pub type DatabasePoolOptions = sqlx::postgres::PgPoolOptions;
 
@@ -86,22 +92,4 @@ impl std::fmt::Display for JoinType {
             JoinType::CrossJoin => write!(f, "CROSS JOIN"),
         }
     }
-}
-
-/// Defines a set operation on an [ActiveValue]
-///
-/// # Examples
-///
-/// ```
-/// use arel::prelude::*;
-/// let active_value = Change(1);
-/// assert_eq!(active_value, ActiveValue::Changed(1, None));
-///
-/// ```
-#[allow(non_snake_case)]
-pub fn Change<V>(v: V) -> ActiveValue<V>
-where
-    V: Into<Value> + Clone,
-{
-    ActiveValue::set(v)
 }

@@ -69,9 +69,5 @@ async fn main() -> anyhow::Result<()> {
     let users: Vec<User> = User::query().fetch_all_as().await?;
     println!("user: {:?}", users[0]);
 
-    // println!("--- : {}", User::query().r#where_sql("name = name-5").to_sql().to_sql_string().unwrap());
-    let user: User = User::query().r#where("name", "name-5").fetch_one_as().await?;
-    println!("==== {:?}", user);
-
     Ok(())
 }

@@ -268,6 +268,18 @@ impl Sql {
         }
         Ok(query_builder)
     }
+    #[allow(dead_code)]
+    pub async fn exec<'a, E>(&self, executor: E) -> anyhow::Result<crate::DatabaseQueryResult>
+    where
+        E: sqlx::Executor<'a, Database = crate::Database>,
+    {
+        let mut query_builder = self.to_query_builder()?;
+        let query = query_builder.deref_mut().build();
+        match query.execute(executor).await {
+            Ok(result) => Ok(result),
+            Err(err) => Err(anyhow::anyhow!(err.to_string())),
+        }
+    }
     pub(crate) async fn fetch_one_exec<'a, E>(&self, executor: E) -> anyhow::Result<crate::DatabaseRow>
     where
         E: sqlx::Executor<'a, Database = crate::Database>,
@@ -279,7 +291,7 @@ impl Sql {
             Err(err) => Err(anyhow::anyhow!(err.to_string())),
         }
     }
-    pub(crate) async fn fetch_one_exec_as<'a, T, E>(&self, executor: E) -> anyhow::Result<T>
+    pub(crate) async fn fetch_one_as_exec<'a, T, E>(&self, executor: E) -> anyhow::Result<T>
     where
         for<'b> T: Send + Unpin + sqlx::FromRow<'b, crate::DatabaseRow>,
         E: sqlx::Executor<'a, Database = crate::Database>,
@@ -302,7 +314,7 @@ impl Sql {
             Err(err) => Err(anyhow::anyhow!(err.to_string())),
         }
     }
-    pub(crate) async fn fetch_all_exec_as<'a, T, E>(&self, executor: E) -> anyhow::Result<Vec<T>>
+    pub(crate) async fn fetch_all_as_exec<'a, T, E>(&self, executor: E) -> anyhow::Result<Vec<T>>
     where
         for<'b> T: Send + Unpin + sqlx::FromRow<'b, crate::DatabaseRow>,
         E: sqlx::Executor<'a, Database = crate::Database>,
