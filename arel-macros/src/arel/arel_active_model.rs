@@ -277,6 +277,78 @@ fn impl_fns(input: &super::Input) -> syn::Result<proc_macro2::TokenStream> {
             }
         ));
     }
+    // pub fn to_destroy_sql(&self) -> anyhow::Result<crate::Sql>
+    {
+        let mut delete_fields_init_clause = proc_macro2::TokenStream::new();
+        for field in fields.iter() {
+            let ident = &field.ident;
+            // let r#type = &field.ty;
+            delete_fields_init_clause.extend(quote::quote!(
+                let field_name = stringify!(#ident);
+                match &self.#ident {
+                    arel::ActiveValue::Changed(nv, ov) => {
+                        if primary_keys.contains(&field_name.into()) {
+                            match ov.as_ref() {
+                                arel::ActiveValue::Unchanged(v) => {
+                                    delete_where_fields.push(field_name);
+                                    delete_where_values.push(v.into());
+                                },
+                                _ => ()
+                            }
+
+                        }
+                    },
+                    arel::ActiveValue::Unchanged(v) => {
+                        if primary_keys.contains(&field_name.into()) {
+                            delete_where_fields.push(field_name);
+                            delete_where_values.push(v.into());
+                        }
+                    }
+                    _ => ()
+                }
+            ));
+        }
+
+        ret_token_stream.extend(quote::quote!(
+            pub fn to_destroy_sql(&self) -> anyhow::Result<arel::Sql> {
+                let primary_keys = {
+                    if let Some(keys) = #model_ident::primary_keys() {
+                        keys
+                    } else if let Some(key) = #model_ident::primary_key() {
+                        vec![key]
+                    } else {
+                        vec![]
+                    }
+                };
+                if primary_keys.len() == 0 {
+                    return Err(anyhow::anyhow!("Primary key/keys MUST SET"));
+                }
+
+                let table_name = #model_ident::table_name();
+                let mut final_sql = arel::Sql::new("");
+                if self.__persisted__ {
+                    let mut delete_where_fields: Vec<&'static str> = vec![];
+                    let mut delete_where_values: Vec<arel::Value> = vec![];
+                    #delete_fields_init_clause
+
+                    final_sql.push_str(format!(r#"DELETE FROM "{}" WHERE "#, table_name));
+                    let len = delete_where_fields.len();
+                    for (idx, field) in delete_where_fields.iter().enumerate() {
+                        let value = &delete_where_values[idx];
+                        let mut sql = arel::Sql::default();
+                        sql.push_str_with_prepare_value(format!(r#""{}" = {}"#, field, sql.prepare_symbol()), value.clone());
+                        final_sql.push_sql(sql);
+                        if idx < len - 1 {
+                            final_sql.push_str(" AND ");
+                        }
+                    }
+                } else {
+                    return Err(anyhow::anyhow!("Model is Not Persisted"));
+                }
+                Ok(final_sql)
+            }
+        ));
+    }
     // pub async fn save_exec<'a, E>(&mut self) -> anyhow::Result<arel::DatabaseQueryResult> where E: sqlx::Executor<'a, Database = arel::Database>
     {
         let mut set_all_to_unchanged_clause = proc_macro2::TokenStream::new();
@@ -307,6 +379,45 @@ fn impl_fns(input: &super::Input) -> syn::Result<proc_macro2::TokenStream> {
         ret_token_stream.extend(quote::quote!(
             pub async fn save(&mut self) -> anyhow::Result<arel::DatabaseQueryResult> {
                 self.save_exec(#model_ident::pool()?).await
+            }
+        ));
+    }
+    // pub async fn destroy_exec<'a, E>(&mut self) -> anyhow::Result<arel::DatabaseQueryResult> where E: sqlx::Executor<'a, Database = arel::Database>
+    {
+        let mut set_all_to_changed_clause = proc_macro2::TokenStream::new();
+        for field in fields.iter() {
+            let ident = &field.ident;
+            // let r#type = &field.ty;
+            set_all_to_changed_clause.extend(quote::quote!(
+                match &mut self.#ident {
+                    arel::ActiveValue::Changed(nv, ov) => {
+                        *ov = std::boxed::Box::new(arel::ActiveValue::NotSet);
+                    },
+                    arel::ActiveValue::Unchanged(v) => {
+                        self.#ident = arel::ActiveValue::Changed(v.clone(), std::boxed::Box::new(arel::ActiveValue::NotSet));
+                    },
+                    _ => ()
+                }
+            ));
+        }
+        ret_token_stream.extend(quote::quote!(
+            pub async fn destroy_exec<'a, E>(&mut self, executor: E) -> anyhow::Result<arel::DatabaseQueryResult> where E: sqlx::Executor<'a, Database = arel::Database> {
+                match self.to_destroy_sql()?.exec(executor).await {
+                    Ok(val) => {
+                        #set_all_to_changed_clause
+                        self.__persisted__ = false;
+                        Ok(val)
+                    },
+                    Err(err) => Err(err)
+                }
+            }
+        ));
+    }
+    // pub fn destroy(&mut self) -> anyhow::Result<arel::DatabaseQueryResult>
+    {
+        ret_token_stream.extend(quote::quote!(
+            pub async fn destroy(&mut self) -> anyhow::Result<arel::DatabaseQueryResult> {
+                self.destroy_exec(#model_ident::pool()?).await
             }
         ));
     }
