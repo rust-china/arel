@@ -31,13 +31,16 @@ where
     /// assert_eq!(changed.set(1), &ActiveValue::Changed(1, Box::new(ActiveValue::NotSet)));
     /// assert_eq!(changed.set(2), &ActiveValue::Changed(2, Box::new(ActiveValue::NotSet)));
     /// ```
-    pub fn set(&mut self, v: V) -> &mut Self {
+    pub fn set<UV>(&mut self, uv: UV) -> &mut Self
+    where
+        UV: Into<V>,
+    {
         match self {
             Self::Changed(nv, _) => {
                 // *self = ActiveValue::Changed(v, ov.clone());
-                *nv = v;
+                *nv = uv.into();
             }
-            _ => *self = ActiveValue::Changed(v, Box::new(self.clone())),
+            _ => *self = ActiveValue::Changed(uv.into(), Box::new(self.clone())),
         }
         self
     }

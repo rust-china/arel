@@ -103,7 +103,7 @@ mod tests {
         assert_eq!(user.id, 2);
         // update
         let mut active_user: ArelActiveUser = user.into();
-        active_user.name.set("user2".into());
+        active_user.name.set("user2");
         let ret = active_user.save().await?;
         assert_eq!(ret.rows_affected(), 1);
         let user: User = User::query().r#where("id", 2).fetch_one_as().await?;
@@ -116,6 +116,7 @@ mod tests {
         assert_eq!(total_count, 99);
 
         // insert
+        let mut active_user = ArelActiveUser { expired_at: Set(None), ..active_user };
         let ret = active_user.save().await?;
         assert_eq!(ret.rows_affected(), 1);
         let total_count = User::query().select_sql("COUNT(*)").fetch_count().await?;

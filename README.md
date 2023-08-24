@@ -36,8 +36,10 @@ let count = User::query().select_sql("COUNT(*)").fetch_count().await?;
 println!("total: {}", count);
 
 // create
-let mut active_user = ArelActiveUser::default();
-active_user.name.set("n1".into());
+let mut active_user = ArelActiveUser {
+  name: Set("n1"),
+  ..Default::default()
+};
 let ret = active_user.save().await?;
 println!("{}", ret.rows_affected());
 
@@ -54,7 +56,7 @@ let uesrs: Vec<ArelUser> = User::query().r#where("id", vec![1, 2, 3]).fetch_all_
 // update
 let user: User = User::query().fetch_one_as().await?;
 let mut active_user: ArelActiveUser = user.into();
-active_user.name.set("n-1".into());
+active_user.name.set("n-1");
 let ret = active_user.save().await?;
 println!("{}", ret.rows_affected());
 
@@ -71,7 +73,7 @@ println!("{}", ret.rows_affected());
 <summary>select</summary>
 
 ```rust
-User::query().select(vec!(["id", "name"])).fetch;
+User::query().select(vec!(["id", "name"])).to_sql();
 ```
 
 </details>
@@ -84,7 +86,7 @@ let sql = User::query().r#where("name", "n1").r#where("id", 1).to_sql();
 // where_not
 let sql = User::query().where_not(id: vec![1, 2, 3]).to_sql();
 // where_range
-let sql = User::query().where_range("age", 18..25).to_sql;
+let sql = User::query().where_range("age", 18..25).to_sql();
 ```
 
 </details>

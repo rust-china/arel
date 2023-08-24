@@ -16,16 +16,9 @@ pub(crate) fn create_arel_active_model(input: &super::Input) -> syn::Result<proc
         let ident = &field.ident;
         let r#type = &field.ty;
 
-        if let Some(inner_type) = super::get_generic_inner_type(r#type, "Option") {
-            build_arel_active_model_fields_clauses.push(quote::quote!(
-                #ident: arel::ActiveValue<#inner_type>
-            ));
-        } else {
-            build_arel_active_model_fields_clauses.push(quote::quote!(
-                #ident: arel::ActiveValue<#r#type>
-            ));
-        }
-
+        build_arel_active_model_fields_clauses.push(quote::quote!(
+            #ident: arel::ActiveValue<#r#type>
+        ));
         build_arel_active_default_init_clauses.push(quote::quote!(
             #ident: arel::ActiveValue::NotSet
         ));
@@ -78,28 +71,16 @@ fn impl_from_model(input: &super::Input) -> syn::Result<proc_macro2::TokenStream
     let mut init_clauses = vec![quote::quote!(arel_active_model.__persisted__ = value.__persisted__;)];
     for field in fields.iter() {
         let ident = &field.ident;
-        let r#type = &field.ty;
-        if let Some(_) = super::get_generic_inner_type(r#type, "Option") {
-            init_clauses.push(quote::quote!(
-                if let Some(v) = &value.#ident {
-                    if value.__persisted__ {
-                        arel_active_model.#ident = arel::ActiveValue::Unchanged(v.clone());
-                    } else {
-                        arel_active_model.#ident = arel::ActiveValue::Changed(v.clone(), std::boxed::Box::new(arel::ActiveValue::NotSet));
-                    }
+
+        init_clauses.push(quote::quote!(
+            arel_active_model.#ident = {
+                if value.__persisted__ {
+                    arel::ActiveValue::Unchanged(value.#ident.clone())
+                } else {
+                    arel::ActiveValue::Changed(value.#ident.clone(), std::boxed::Box::new(arel::ActiveValue::NotSet))
                 }
-            ));
-        } else {
-            init_clauses.push(quote::quote!(
-                arel_active_model.#ident = {
-                    if value.__persisted__ {
-                        arel::ActiveValue::Unchanged(value.#ident.clone())
-                    } else {
-                        arel::ActiveValue::Changed(value.#ident.clone(), std::boxed::Box::new(arel::ActiveValue::NotSet))
-                    }
-                };
-            ));
-        }
+            };
+        ));
     }
 
     let mut ret_token_stream = proc_macro2::TokenStream::new();
@@ -126,16 +107,26 @@ fn impl_from_arel_model(input: &super::Input) -> syn::Result<proc_macro2::TokenS
     let mut init_clauses = vec![quote::quote!(arel_active_model.__persisted__ = value.__persisted__;)];
     for field in fields.iter() {
         let ident = &field.ident;
-        // let r#type = &field.ty;
-        init_clauses.push(quote::quote!(
-            if let Some(v) = &value.#ident {
+        let r#type = &field.ty;
+        if let Some(_) = super::get_generic_inner_type(r#type, "Option") {
+            init_clauses.push(quote::quote!(
                 if value.__persisted__ {
-                    arel_active_model.#ident = arel::ActiveValue::Unchanged(v.clone());
+                    arel_active_model.#ident = arel::ActiveValue::Unchanged(value.#ident.clone());
                 } else {
-                    arel_active_model.#ident = arel::ActiveValue::Changed(v.clone(), std::boxed::Box::new(arel::ActiveValue::NotSet));
+                    arel_active_model.#ident = arel::ActiveValue::Changed(value.#ident.clone(), std::boxed::Box::new(arel::ActiveValue::NotSet));
                 }
-            }
-        ));
+            ));
+        } else {
+            init_clauses.push(quote::quote!(
+                if let Some(v) = &value.#ident {
+                    if value.__persisted__ {
+                        arel_active_model.#ident = arel::ActiveValue::Unchanged(v.clone());
+                    } else {
+                        arel_active_model.#ident = arel::ActiveValue::Changed(v.clone(), std::boxed::Box::new(arel::ActiveValue::NotSet));
+                    }
+                }
+            ));
+        }
     }
 
     let mut ret_token_stream = proc_macro2::TokenStream::new();

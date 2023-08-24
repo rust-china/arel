@@ -93,3 +93,12 @@ impl std::fmt::Display for JoinType {
         }
     }
 }
+
+#[allow(non_snake_case)]
+pub fn Set<V, UV: Into<V>>(uv: UV) -> ActiveValue<V>
+where
+    V: Into<Value> + Clone,
+    UV: Into<V>,
+{
+    ActiveValue::Changed(uv.into(), Box::new(ActiveValue::NotSet))
+}
