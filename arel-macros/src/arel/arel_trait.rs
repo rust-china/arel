@@ -19,7 +19,11 @@ pub(crate) fn impl_primary_key_or_primary_keys(input: &super::Input) -> syn::Res
     for field in fields.iter() {
         if let Some(_) = super::get_path_value(input, Some(field), "primary_key", None)? {
             if let Some(field_ident) = &field.ident {
-                primary_keys.push(field_ident.to_string());
+                if let Some(rename) = super::get_path_value(input, Some(field), "rename", None)? {
+                    primary_keys.push(rename);
+                } else {
+                    primary_keys.push(field_ident.to_string());
+                }
             }
         }
     }

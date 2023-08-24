@@ -23,6 +23,8 @@ struct User {
   #[arel(primary_key)]
   id: i64,
   name: String,
+  #[arel(rename = "type")]
+  r#type: String,
   expired_at: Option<chrono::DateTime<chrono::FixedOffset>>,
 }
 

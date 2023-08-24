@@ -3,8 +3,11 @@ use arel::prelude::*;
 #[allow(dead_code)]
 #[arel]
 struct User {
+    #[arel(primary_key)]
     id: i32,
     name: String,
+    #[arel(rename = "type")]
+    r#type: String,
     desc: Option<String>,
     done: Option<bool>,
     lock_version: Option<i32>,
@@ -19,6 +22,7 @@ async fn init_db() -> anyhow::Result<()> {
             (
                 id             INTEGER PRIMARY KEY NOT NULL,
                 name           VARCHAR(255),
+                type           VARCHAR(255),
                 desc           TEXT,
                 done           BOOLEAN NOT NULL DEFAULT 0,
                 lock_version   INT(11) NOT NULL DEFAULT 0,
@@ -32,7 +36,11 @@ async fn init_db() -> anyhow::Result<()> {
         Box::pin(async move {
             // let inner_tx = tx.begin().await?;
             for entry in 1i32..=100 {
-                sqlx::query("INSERT INTO user (name) VALUES ($1)").bind(format!("name-{}", entry)).execute(tx.as_mut()).await?;
+                sqlx::query("INSERT INTO user (name, type) VALUES ($1, $2)")
+                    .bind(format!("name-{}", entry))
+                    .bind("Admin")
+                    .execute(tx.as_mut())
+                    .await?;
             }
             Ok(None)
         })
@@ -44,7 +52,11 @@ async fn init_db() -> anyhow::Result<()> {
         Box::pin(async move {
             // let inner_tx = tx.begin().await?;
             for entry in 101i32..=200 {
-                sqlx::query("INSERT INTO user (name) VALUES ($1)").bind(format!("name-{}", entry)).execute(tx.as_mut()).await?;
+                sqlx::query("INSERT INTO user (name, type) VALUES ($1, $2)")
+                    .bind(format!("name-{}", entry))
+                    .bind("Admin")
+                    .execute(tx.as_mut())
+                    .await?;
             }
             Err(anyhow::anyhow!("rollback"))
         })
@@ -104,10 +116,12 @@ mod tests {
         // update
         let mut active_user: ArelActiveUser = user.into();
         active_user.name.set("user2");
+        active_user.r#type.set("Admin2");
         let ret = active_user.save().await?;
         assert_eq!(ret.rows_affected(), 1);
         let user: User = User::query().r#where("id", 2).fetch_one_as().await?;
         assert_eq!(user.name, "user2");
+        assert_eq!(user.r#type, "Admin2");
 
         // delete
         let ret = active_user.destroy().await?;

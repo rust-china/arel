@@ -6,6 +6,7 @@ struct User {
     #[arel(primary_key)]
     pub id: i32,
     name: String,
+    #[arel(rename = "type")]
     r#type: String,
     desc: Option<String>,
     done: Option<bool>,

@@ -34,14 +34,20 @@ pub fn create_arel(args: TokenStream, input: TokenStream) -> TokenStream {
 fn do_expand(input: &Input) -> syn::Result<proc_macro2::TokenStream> {
     let st = &input.st;
     let model_name_ident = &input.st.ident;
-    let model_fields = get_fields(input)?
-        .clone()
-        .into_iter()
-        .map(|mut f| {
-            f.attrs = vec![];
-            f
-        })
-        .collect::<Vec<syn::Field>>();
+
+    let mut model_fields = vec![];
+    for field in get_fields(input)?.iter() {
+        let mut new_field = field.clone();
+        new_field.attrs = vec![];
+
+        // arel(rename="x")
+        if let Some(rename) = get_path_value(input, Some(&field), "rename", None)? {
+            new_field.attrs.push(syn::parse_quote! {
+                #[sqlx(rename = #rename)]
+            });
+        }
+        model_fields.push(new_field);
+    }
 
     let arel_trait_impl_table_name = arel_trait::impl_table_name(input)?;
     let arel_trait_impl_primary_key_or_primary_keys = arel_trait::impl_primary_key_or_primary_keys(input)?;

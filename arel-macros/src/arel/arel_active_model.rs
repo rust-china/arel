@@ -10,15 +10,19 @@ pub(crate) fn create_arel_active_model(input: &super::Input) -> syn::Result<proc
     let generics = &st.generics;
     let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
 
-    let mut build_arel_active_model_fields_clauses = vec![];
     let mut build_arel_active_default_init_clauses = vec![];
+    let mut model_fields = vec![];
     for field in fields.iter() {
+        let mut new_field = field.clone();
+        new_field.attrs = vec![];
+
         let ident = &field.ident;
         let r#type = &field.ty;
 
-        build_arel_active_model_fields_clauses.push(quote::quote!(
-            #ident: arel::ActiveValue<#r#type>
-        ));
+        new_field.vis = syn::parse_quote! { pub };
+        new_field.ty = syn::parse_quote! { arel::ActiveValue<#r#type> };
+        model_fields.push(new_field);
+
         build_arel_active_default_init_clauses.push(quote::quote!(
             #ident: arel::ActiveValue::NotSet
         ));
@@ -33,7 +37,7 @@ pub(crate) fn create_arel_active_model(input: &super::Input) -> syn::Result<proc
         #[derive(Clone, Debug, PartialEq)]
         pub struct #arel_active_model_ident #generics {
             pub __persisted__: bool,
-            #(pub #build_arel_active_model_fields_clauses),*
+            #(#model_fields),*
         }
         impl #impl_generics Default for #arel_active_model_ident #type_generics #where_clause {
             fn default() -> Self {
@@ -151,13 +155,24 @@ fn impl_fns(input: &super::Input) -> syn::Result<proc_macro2::TokenStream> {
     // pub fn to_sql(&self) -> anyhow::Result<crate::Sql>
     {
         let mut update_fields_init_clause = proc_macro2::TokenStream::new();
-
         let mut insert_fields_init_clause = proc_macro2::TokenStream::new();
         for field in fields.iter() {
             let ident = &field.ident;
             // let r#type = &field.ty;
+
+            let field_name = {
+                if let Some(rename) = super::get_path_value(input, Some(&field), "rename", None)? {
+                    rename
+                } else {
+                    match ident {
+                        Some(ident) => ident.to_string(),
+                        _ => return Err(syn::Error::new_spanned(field, "Field name can not Blank!")),
+                    }
+                }
+            };
+
             update_fields_init_clause.extend(quote::quote!(
-                let field_name = stringify!(#ident);
+                let field_name = #field_name;
                 match &self.#ident {
                     arel::ActiveValue::Changed(nv, ov) => {
                         update_fields.push(field_name);
@@ -184,9 +199,10 @@ fn impl_fns(input: &super::Input) -> syn::Result<proc_macro2::TokenStream> {
             ));
 
             insert_fields_init_clause.extend(quote::quote!(
+                let field_name = #field_name;
                 match &self.#ident {
                     arel::ActiveValue::Changed(nv, _) => {
-                        insert_fields.push(stringify!(#ident));
+                        insert_fields.push(field_name);
                         insert_values.push(nv.into());
                     },
                     _ => ()
@@ -274,8 +290,20 @@ fn impl_fns(input: &super::Input) -> syn::Result<proc_macro2::TokenStream> {
         for field in fields.iter() {
             let ident = &field.ident;
             // let r#type = &field.ty;
+
+            let field_name = {
+                if let Some(rename) = super::get_path_value(input, Some(&field), "rename", None)? {
+                    rename
+                } else {
+                    match ident {
+                        Some(ident) => ident.to_string(),
+                        _ => return Err(syn::Error::new_spanned(field, "Field name can not Blank!")),
+                    }
+                }
+            };
+
             delete_fields_init_clause.extend(quote::quote!(
-                let field_name = stringify!(#ident);
+                let field_name = #field_name;
                 match &self.#ident {
                     arel::ActiveValue::Changed(nv, ov) => {
                         if primary_keys.contains(&field_name.into()) {
