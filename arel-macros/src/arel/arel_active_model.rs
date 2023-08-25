@@ -234,51 +234,20 @@ fn impl_fns(input: &super::Input) -> syn::Result<proc_macro2::TokenStream> {
                     let mut update_where_values: Vec<arel::Value> = vec![];
                     #update_fields_init_clause
 
-                    final_sql.push_str(format!(r#"UPDATE "{}" SET"#, table_name));
-                    let len = update_fields.len();
-                    for (idx, field) in update_fields.iter().enumerate() {
-                        let value = &update_values[idx];
-                        let mut sql = arel::Sql::default();
-                        sql.push_str_with_prepare_value(format!(r#""{}" = {}"#, field, sql.prepare_symbol()), value.clone());
-                        final_sql.push_sql(sql);
-                        if idx < len - 1 {
-                            final_sql.push_str(", ");
-                        }
+                    if update_where_fields.len() == 0 {
+                        return Err(anyhow::anyhow!("Update where statement is blank!"));
                     }
-
-                    final_sql.push_str(" WHERE ");
-                    let len = update_where_fields.len();
-                    for (idx, field) in update_where_fields.iter().enumerate() {
-                        let value = &update_where_values[idx];
-                        let mut sql = arel::Sql::default();
-                        sql.push_str_with_prepare_value(format!(r#""{}" = {}"#, field, sql.prepare_symbol()), value.clone());
-                        final_sql.push_sql(sql);
-                        if idx < len - 1 {
-                            final_sql.push_str(" AND ");
-                        }
+                    if let Some(sql) = arel::statements::update::Update::<#model_ident>::new(update_fields, update_values, update_where_fields, update_where_values).to_sql() {
+                        final_sql = sql;
                     }
                 } else {
                     let mut insert_fields: Vec<&'static str> = vec![];
                     let mut insert_values: Vec<arel::Value> = vec![];
                     #insert_fields_init_clause
 
-                    final_sql.push_str(format!(r#"INSERT INTO "{}""#, table_name));
-
-                    let mut field_sql = arel::Sql::new("(");
-                    let mut value_sql = arel::Sql::new("(");
-                    let len = insert_fields.len();
-                    for (idx, field) in insert_fields.iter().enumerate() {
-                        let value = &insert_values[idx];
-                        field_sql.push_str(format!(r#""{}""#, field));
-                        value_sql.push_str_with_prepare_value(value_sql.prepare_symbol(), value.clone());
-                        if idx < len - 1 {
-                            field_sql.push_str(", ");
-                            value_sql.push_str(", ");
-                        }
+                    if let Some(sql) = arel::statements::insert::Insert::<#model_ident>::new(insert_fields, insert_values).to_sql() {
+                        final_sql = sql;
                     }
-                    field_sql.push(')');
-                    value_sql.push(')');
-                    final_sql.push_sql(field_sql).push_str(" VALUES ").push_sql(value_sql);
                 }
                 Ok(final_sql)
             }
@@ -350,16 +319,11 @@ fn impl_fns(input: &super::Input) -> syn::Result<proc_macro2::TokenStream> {
                     let mut delete_where_values: Vec<arel::Value> = vec![];
                     #delete_fields_init_clause
 
-                    final_sql.push_str(format!(r#"DELETE FROM "{}" WHERE "#, table_name));
-                    let len = delete_where_fields.len();
-                    for (idx, field) in delete_where_fields.iter().enumerate() {
-                        let value = &delete_where_values[idx];
-                        let mut sql = arel::Sql::default();
-                        sql.push_str_with_prepare_value(format!(r#""{}" = {}"#, field, sql.prepare_symbol()), value.clone());
-                        final_sql.push_sql(sql);
-                        if idx < len - 1 {
-                            final_sql.push_str(" AND ");
-                        }
+                    if delete_where_fields.len() == 0 {
+                        return Err(anyhow::anyhow!("Update where statement is blank!"));
+                    }
+                    if let Some(sql) = arel::statements::delete::Delete::<#model_ident>::new(delete_where_fields, delete_where_values).to_sql() {
+                        final_sql = sql;
                     }
                 } else {
                     return Err(anyhow::anyhow!("Model is Not Persisted"));
