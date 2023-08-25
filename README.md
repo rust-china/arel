@@ -10,8 +10,7 @@
 ### Install
 
 ```Cargo.toml
-# db: sqlite|postgres|mysql
-arel = { version = "0.2", features = ["runtime-tokio", "tls-rustls", "sqlite"] }
+arel = { version = "0.2", features = ["runtime-tokio-native-tls", "sqlite"] }
 ```
 
 ### Demo
@@ -27,9 +26,11 @@ struct User {
   r#type: String,
   expired_at: Option<chrono::DateTime<chrono::FixedOffset>>,
 }
+impl Arel for User {}
 
 // init db from Environment
 std::env::set_var("DATABASE_URL", "sqlite::memory:");
+arel::visitor::init().await?;
 // or init db from code
 arel::visitor::get_or_init(|| Box::pin(async { arel::DatabasePoolOptions::new().max_connections(5).connect("sqlite::memory:").await })).await?;
 
