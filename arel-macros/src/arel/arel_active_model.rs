@@ -1,11 +1,11 @@
 use syn::spanned::Spanned;
 
-pub(crate) fn create_arel_active_model(input: &super::Input) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn create_arel_active_model(input: &crate::Input) -> syn::Result<proc_macro2::TokenStream> {
     let st = &input.st;
     let arel_active_model_ident = syn::Ident::new(&format!("ArelActive{}", st.ident.to_string()), st.span());
 
     let mut ret_token_stream = proc_macro2::TokenStream::new();
-    let fields = super::get_fields(input)?;
+    let fields = crate::get_fields(input)?;
 
     let generics = &st.generics;
     let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
@@ -65,10 +65,10 @@ pub(crate) fn create_arel_active_model(input: &super::Input) -> syn::Result<proc
     Ok(ret_token_stream)
 }
 
-fn impl_from_model(input: &super::Input) -> syn::Result<proc_macro2::TokenStream> {
+fn impl_from_model(input: &crate::Input) -> syn::Result<proc_macro2::TokenStream> {
     let st = &input.st;
     let model_name_ident = &st.ident;
-    let fields = super::get_fields(input)?;
+    let fields = crate::get_fields(input)?;
     let generics = &st.generics;
     let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
 
@@ -101,10 +101,10 @@ fn impl_from_model(input: &super::Input) -> syn::Result<proc_macro2::TokenStream
     Ok(ret_token_stream)
 }
 
-fn impl_from_arel_model(input: &super::Input) -> syn::Result<proc_macro2::TokenStream> {
+fn impl_from_arel_model(input: &crate::Input) -> syn::Result<proc_macro2::TokenStream> {
     let st = &input.st;
     let arel_model_name_ident = syn::Ident::new(&format!("Arel{}", st.ident.to_string()), st.span());
-    let fields = super::get_fields(input)?;
+    let fields = crate::get_fields(input)?;
     let generics = &st.generics;
     let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
 
@@ -112,7 +112,7 @@ fn impl_from_arel_model(input: &super::Input) -> syn::Result<proc_macro2::TokenS
     for field in fields.iter() {
         let ident = &field.ident;
         let r#type = &field.ty;
-        if let Some(_) = super::get_generic_inner_type(r#type, "Option") {
+        if let Some(_) = crate::get_generic_inner_type(r#type, "Option") {
             init_clauses.push(quote::quote!(
                 if value.__persisted__ {
                     arel_active_model.#ident = arel::ActiveValue::Unchanged(value.#ident.clone());
@@ -147,9 +147,9 @@ fn impl_from_arel_model(input: &super::Input) -> syn::Result<proc_macro2::TokenS
     Ok(ret_token_stream)
 }
 
-fn impl_fns(input: &super::Input) -> syn::Result<proc_macro2::TokenStream> {
+fn impl_fns(input: &crate::Input) -> syn::Result<proc_macro2::TokenStream> {
     let model_ident = &input.st.ident;
-    let fields = super::get_fields(input)?;
+    let fields = crate::get_fields(input)?;
     let mut ret_token_stream = proc_macro2::TokenStream::new();
 
     // pub fn to_sql(&self) -> anyhow::Result<crate::Sql>
@@ -161,7 +161,7 @@ fn impl_fns(input: &super::Input) -> syn::Result<proc_macro2::TokenStream> {
             // let r#type = &field.ty;
 
             let field_name = {
-                if let Some(rename) = super::get_path_value(input, Some(&field), "rename", None)? {
+                if let Some(rename) = crate::get_path_value(input, Some(&field), "rename", None)? {
                     rename
                 } else {
                     match ident {
@@ -261,7 +261,7 @@ fn impl_fns(input: &super::Input) -> syn::Result<proc_macro2::TokenStream> {
             // let r#type = &field.ty;
 
             let field_name = {
-                if let Some(rename) = super::get_path_value(input, Some(&field), "rename", None)? {
+                if let Some(rename) = crate::get_path_value(input, Some(&field), "rename", None)? {
                     rename
                 } else {
                     match ident {
