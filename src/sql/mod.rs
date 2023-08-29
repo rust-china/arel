@@ -196,7 +196,7 @@ impl Sql {
                     let prepare_value = prepare_values.get(prepare_idx).ok_or_else(|| anyhow::anyhow!("参数不足"))?;
                     prepare_idx += 1;
                     match prepare_value {
-                        crate::Value::Bytes(Some(bytes)) => {
+                        crate::Value::Bytes(bytes) => {
                             raw_sql.push_str(&format!(r#"?b"{}""#, bytes.escape_ascii().to_string()));
                         }
                         _ => {
