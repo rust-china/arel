@@ -345,7 +345,7 @@ fn impl_fns(input: &crate::Input) -> syn::Result<proc_macro2::TokenStream> {
             ));
         }
         ret_token_stream.extend(quote::quote!(
-            pub async fn save_exec<'a, E>(&mut self, executor: E) -> anyhow::Result<arel::DatabaseQueryResult> where E: sqlx::Executor<'a, Database = arel::Database> {
+            pub async fn save_exec<'a, E>(&mut self, executor: E) -> anyhow::Result<arel::DatabaseQueryResult> where E: arel::sqlx::Executor<'a, Database = arel::Database> {
                 match self.to_sql()?.exec(executor).await {
                     Ok(val) => {
                         #set_all_to_unchanged_clause
@@ -384,7 +384,7 @@ fn impl_fns(input: &crate::Input) -> syn::Result<proc_macro2::TokenStream> {
             ));
         }
         ret_token_stream.extend(quote::quote!(
-            pub async fn destroy_exec<'a, E>(&mut self, executor: E) -> anyhow::Result<arel::DatabaseQueryResult> where E: sqlx::Executor<'a, Database = arel::Database> {
+            pub async fn destroy_exec<'a, E>(&mut self, executor: E) -> anyhow::Result<arel::DatabaseQueryResult> where E: arel::sqlx::Executor<'a, Database = arel::Database> {
                 match self.to_destroy_sql()?.exec(executor).await {
                     Ok(val) => {
                         #set_all_to_changed_clause

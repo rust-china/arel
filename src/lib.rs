@@ -9,6 +9,7 @@ compile_error!("feature `sqlite` and `postgres` shouldn't be enabled both.");
 compile_error!("feature `mysql` and `postgres` shouldn't be enabled both.");
 
 pub use anyhow;
+pub use chrono;
 pub use sqlx;
 
 pub use arel_macros::arel;
