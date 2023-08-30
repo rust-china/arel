@@ -10,4 +10,4 @@ pub use crate::arel;
 pub use crate::statements::ArelStatement;
 pub use crate::Set;
 // pub use crate::{ActiveValue, Value};
-pub use crate::{Arel, ArelPersisted, SuperArel};
+pub use crate::{Arel, ArelAttributeFromRow, ArelPersisted, SuperArel};

@@ -39,16 +39,16 @@ impl<'a> QueryBuilder<'a> {
                 self.push_bind(Some(*val));
             }
             crate::Value::TinyUnsigned(val) => {
-                self.push_bind(Some(*val as i32));
+                self.push_bind(Some(*val as i64));
             }
             crate::Value::SmallUnsigned(val) => {
-                self.push_bind(Some(*val as i32));
+                self.push_bind(Some(*val as i64));
             }
             crate::Value::Unsigned(val) => {
-                self.push_bind(Some(*val as i32));
+                self.push_bind(Some(*val as i64));
             }
             crate::Value::BigUnsigned(val) => {
-                self.push_bind(Some(*val as i32));
+                self.push_bind(Some(*val as i64));
             }
             crate::Value::Float(val) => {
                 self.push_bind(Some(*val));

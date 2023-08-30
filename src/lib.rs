@@ -22,7 +22,7 @@ pub mod traits;
 pub mod value;
 pub mod visitor;
 
-pub use crate::traits::{Arel, ArelPersisted, SuperArel};
+pub use crate::traits::{Arel, ArelAttributeFromRow, ArelPersisted, SuperArel};
 pub use bytes::Bytes;
 pub use sql::Sql;
 pub use value::{ActiveValue, Value};

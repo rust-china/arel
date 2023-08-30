@@ -75,11 +75,13 @@ fn impl_trait_sqlx_from_row(input: &crate::Input) -> syn::Result<proc_macro2::To
         // arel(rename="x")
         if let Some(rename) = crate::get_path_value(input, Some(&field), "rename", None)? {
             build_assign_clauses.push(quote::quote!(
-                user.#ident = row.try_get::<#option_type, _>(#rename).unwrap_or_default();
+                // user.#ident = row.try_get::<#option_type, _>(#rename).unwrap_or_default();
+                user.#ident = <#option_type as arel::ArelAttributeFromRow>::from_row(&row, #rename).unwrap_or_default();
             ));
         } else {
             build_assign_clauses.push(quote::quote!(
-                user.#ident = row.try_get::<#option_type, _>(stringify!(#ident)).unwrap_or_default();
+                // user.#ident = row.try_get::<#option_type, _>(stringify!(#ident)).unwrap_or_default();
+                user.#ident = <#option_type as arel::ArelAttributeFromRow>::from_row(&row, stringify!(#ident)).unwrap_or_default();
             ));
         }
     }

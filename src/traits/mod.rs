@@ -1,3 +1,9 @@
+mod arel_attribute_from_row;
+mod arel_persisted;
+
+pub use arel_attribute_from_row::ArelAttributeFromRow;
+pub use arel_persisted::ArelPersisted;
+
 use std::borrow::Cow;
 use std::future::Future;
 use std::pin::Pin;
@@ -117,11 +123,6 @@ pub trait Arel: SuperArel + Sized {
             }
         }
     }
-}
-
-pub trait ArelPersisted {
-    fn set_persisted(&mut self, persisted: bool);
-    fn persited(&self) -> bool;
 }
 
 #[cfg(test)]

@@ -1,5 +1,36 @@
 use arel::prelude::*;
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum Gender {
+    Unknown = 0,
+    Male = 1,
+    Female = 2,
+}
+impl ArelAttributeFromRow for Gender {
+    fn from_row<'r, I>(row: &'r arel::DatabaseRow, index: I) -> sqlx::Result<Self, sqlx::Error>
+    where
+        Self: Sized,
+        I: sqlx::ColumnIndex<arel::DatabaseRow>,
+    {
+        let v: u8 = row.try_get(index)?;
+        let ret = match v {
+            1 => Gender::Male,
+            2 => Gender::Female,
+            _ => Gender::Unknown,
+        };
+        Ok(ret)
+    }
+}
+impl From<Gender> for arel::Value {
+    fn from(value: Gender) -> Self {
+        match value {
+            Gender::Male => 1.into(),
+            Gender::Female => 2.into(),
+            _ => 0.into(),
+        }
+    }
+}
+
 #[allow(dead_code)]
 #[arel]
 struct User {
@@ -8,6 +39,7 @@ struct User {
     name: String,
     #[arel(rename = "type")]
     r#type: String,
+    gender: Option<Gender>,
     desc: Option<String>,
     done: Option<bool>,
     lock_version: Option<i32>,
@@ -23,6 +55,7 @@ async fn init_db() -> anyhow::Result<()> {
                 id             INTEGER PRIMARY KEY NOT NULL,
                 name           VARCHAR(255),
                 type           VARCHAR(255),
+                gender         INT(1),
                 desc           TEXT,
                 done           BOOLEAN NOT NULL DEFAULT 0,
                 lock_version   INT(11) NOT NULL DEFAULT 0,
@@ -113,15 +146,18 @@ mod tests {
 
         let user: User = User::query().r#where("id", 2).fetch_one_as().await?;
         assert_eq!(user.id, 2);
+        assert_eq!(user.gender, Some(Gender::Unknown));
         // update
         let mut active_user: ArelActiveUser = user.into();
         active_user.name.set("user2");
         active_user.r#type.set("Admin2");
+        active_user.gender.set(Gender::Male);
         let ret = active_user.save().await?;
         assert_eq!(ret.rows_affected(), 1);
         let user: User = User::query().r#where("id", 2).fetch_one_as().await?;
         assert_eq!(user.name, "user2");
         assert_eq!(user.r#type, "Admin2");
+        assert_eq!(user.gender, Some(Gender::Male));
 
         // delete
         let ret = active_user.destroy().await?;
