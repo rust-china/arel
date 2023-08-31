@@ -13,6 +13,3 @@ pretty_env_logger = "0.4"
 arel = { path = "..", features = ["runtime-tokio", "tls-rustls", "sqlite"] }
 # arel-macro = { path = "../arel-macro" }
 tokio = { version = "1", features = ["full"] }
-sqlx = { version = "0.7" }
-chrono = { workspace = true }
-anyhow = { workspace = true }

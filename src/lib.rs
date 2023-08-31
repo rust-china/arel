@@ -12,7 +12,7 @@ pub use anyhow;
 pub use chrono;
 pub use sqlx;
 
-pub use arel_macros::arel;
+pub use arel_macros::{arel, arel_attribute};
 
 pub mod manager;
 pub mod prelude;

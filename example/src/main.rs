@@ -1,44 +1,36 @@
+#[allow(dead_code)]
 use arel::prelude::*;
 
-#[derive(Debug, Clone, PartialEq)]
+#[arel_attribute]
 pub enum Gender {
-    Unknown = 0,
-    Male = 1,
-    Female = 2,
+    #[arel_attribute(value = 0)]
+    Unknown,
+    #[arel_attribute(value = 1)]
+    Male,
+    #[arel_attribute(value = 2)]
+    Female,
 }
-impl ArelAttributeFromRow for Gender {
-    fn from_row<'r, I>(row: &'r arel::DatabaseRow, index: I) -> sqlx::Result<Self, sqlx::Error>
-    where
-        Self: Sized,
-        I: sqlx::ColumnIndex<arel::DatabaseRow>,
-    {
-        let v: u8 = row.try_get(index)?;
-        let ret = match v {
-            1 => Gender::Male,
-            2 => Gender::Female,
-            _ => Gender::Unknown,
-        };
-        Ok(ret)
-    }
+
+#[arel_attribute]
+pub enum Type {
+    #[arel_attribute(value = "user")]
+    User,
+    #[arel_attribute(value = "admin")]
+    Admin,
 }
-impl From<Gender> for arel::Value {
-    fn from(value: Gender) -> Self {
-        match value {
-            Gender::Male => 1.into(),
-            Gender::Female => 2.into(),
-            _ => 0.into(),
-        }
+impl Default for Type {
+    fn default() -> Self {
+        Self::User
     }
 }
 
 #[arel(table_name = "user")]
-#[allow(dead_code)]
 struct User {
     #[arel(primary_key)]
     pub id: i32,
     name: String,
     #[arel(rename = "type")]
-    r#type: String,
+    r#type: Type,
     gender: Option<Gender>,
     desc: Option<String>,
     done: Option<bool>,

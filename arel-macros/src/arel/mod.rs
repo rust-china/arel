@@ -7,31 +7,34 @@ use quote::ToTokens;
 use syn::parse::Parser;
 
 pub fn create_arel(args: TokenStream, input: TokenStream) -> TokenStream {
-    let input = crate::Input {
+    let input = crate::ItemInput {
         args: if args.is_empty() {
             None
         } else {
             Some(syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated.parse(args).unwrap())
         },
-        st: syn::parse_macro_input!(input as syn::DeriveInput),
+        input: syn::parse_macro_input!(input as syn::Item),
     };
 
     match do_expand(&input) {
         Ok(token_stream) => token_stream.into(),
         Err(e) => {
             let mut ret_token_stream = e.to_compile_error();
-            ret_token_stream.extend(input.st.to_token_stream());
+            ret_token_stream.extend(input.input.to_token_stream());
             ret_token_stream.into()
         }
     }
 }
 
-fn do_expand(input: &crate::Input) -> syn::Result<proc_macro2::TokenStream> {
-    let st = &input.st;
-    let model_name_ident = &input.st.ident;
+fn do_expand(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
+    match &input.input {
+        syn::Item::Struct(_) => (),
+        _ => return Err(syn::Error::new_spanned(&input.input, "arel only allow use on struct type")),
+    }
 
+    let model_name_ident = input.ident()?;
     let mut model_fields = vec![];
-    for field in crate::get_fields(input)?.iter() {
+    for field in input.struct_fields()?.iter() {
         let mut new_field = field.clone();
         new_field.attrs = vec![];
 
@@ -48,15 +51,16 @@ fn do_expand(input: &crate::Input) -> syn::Result<proc_macro2::TokenStream> {
     let arel_trait_impl_primary_key_or_primary_keys = arel_trait::impl_primary_key_or_primary_keys(input)?;
     let model_impl_trait_sqlx_from_row = impl_trait_sqlx_from_row(input)?;
 
-    let generics = &st.generics;
+    let generics = input.generics()?;
     let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
 
     let arel_model = arel_model::create_arel_model(input)?;
     let arel_active_model = arel_active_model::create_arel_active_model(input)?;
 
+    let vis = input.vis()?;
     Ok(quote::quote!(
         #[derive(Clone, Debug, Default, PartialEq)]
-        pub struct #model_name_ident #generics {
+        #vis struct #model_name_ident #generics {
             pub __persisted__: bool,
             #(#model_fields),*
         }
@@ -80,10 +84,9 @@ fn do_expand(input: &crate::Input) -> syn::Result<proc_macro2::TokenStream> {
     ))
 }
 
-fn impl_trait_sqlx_from_row(input: &crate::Input) -> syn::Result<proc_macro2::TokenStream> {
-    let st = &input.st;
-    let model_ident = &st.ident;
-    let fields = crate::get_fields(input)?;
+fn impl_trait_sqlx_from_row(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
+    let model_ident = input.ident()?;
+    let fields = input.struct_fields()?;
 
     let mut build_assign_clauses = vec![];
     for field in fields.iter() {
@@ -93,7 +96,7 @@ fn impl_trait_sqlx_from_row(input: &crate::Input) -> syn::Result<proc_macro2::To
         let ident = &field.ident;
         let r#type = &field.ty;
         // arel(rename="x")
-        if let Some(rename) = crate::get_path_value(input, Some(&field), "rename", None)? {
+        if let Some((rename, _)) = crate::ItemInput::get_field_path_value(&field, "arel", "rename", None)? {
             build_assign_clauses.push(quote::quote!(
                 // user.#ident = row.try_get::<#r#type, _>(#rename).unwrap_or_default();
                 user.#ident = <#r#type as arel::ArelAttributeFromRow>::from_row(&row, #rename).unwrap_or_default();
@@ -106,10 +109,10 @@ fn impl_trait_sqlx_from_row(input: &crate::Input) -> syn::Result<proc_macro2::To
         }
     }
 
-    let mut generics = st.generics.clone();
+    let mut generics = input.generics()?.clone();
     generics.params.push(syn::parse_quote!('_r));
     let (impl_generics, _, _) = generics.split_for_impl();
-    let (_, type_generics, where_clause) = st.generics.split_for_impl();
+    let (_, type_generics, where_clause) = input.generics()?.split_for_impl();
     Ok(quote::quote!(
         impl #impl_generics arel::sqlx::FromRow<'_r, arel::DatabaseRow> for #model_ident #type_generics #where_clause  {
             fn from_row(row: &'_r arel::DatabaseRow) -> arel::sqlx::Result<Self, arel::sqlx::Error> {
