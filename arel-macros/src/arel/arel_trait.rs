@@ -1,7 +1,7 @@
 pub(crate) fn impl_table_name(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
     let mut ret_token_stream = proc_macro2::TokenStream::new();
 
-    if let Some((table_name, _)) = input.get_args_path_value("arel", "table_name", None)? {
+    if let Some((table_name, _)) = input.get_args_path_value(vec!["arel"], "table_name", None)? {
         ret_token_stream.extend(quote::quote!(
             fn _table_name() -> std::borrow::Cow<'static, str> {
                 std::borrow::Cow::Borrowed(#table_name)
@@ -17,12 +17,12 @@ pub(crate) fn impl_primary_key_or_primary_keys(input: &crate::ItemInput) -> syn:
 
     let mut primary_keys: Vec<String> = vec![];
     for field in fields.iter() {
-        if let Some(_) = crate::ItemInput::get_field_path_value(field, "arel", "primary_key", None)? {
+        if let Some(_) = crate::ItemInput::get_field_path_value(field, vec!["arel"], "primary_key", None)? {
             if let Some(field_ident) = &field.ident {
-                if let Some((rename, _)) = crate::ItemInput::get_field_path_value(field, "arel", "rename", None)? {
+                if let Some((rename, _)) = crate::ItemInput::get_field_path_value(field, vec!["arel"], "rename", None)? {
                     primary_keys.push(rename);
                 } else {
-                    primary_keys.push(field_ident.to_string());
+                    primary_keys.push(field_ident.to_string().trim_start_matches("r#").to_string());
                 }
             }
         }

@@ -43,9 +43,9 @@ pub enum Gender {
 
 #[arel_attribute]
 pub enum Type {
-    #[arel_attribute(value = "user")]
+    #[arel_attribute(value = "USER")]
     User,
-    #[arel_attribute(value = "admin")]
+    #[arel_attribute(value = "ADMIN")]
     Admin,
 }
 impl Default for Type {
@@ -61,7 +61,7 @@ struct User {
     id: i32,
     name: String,
     #[arel(rename = "type")]
-    r#type: Type,
+    ty: Type,
     gender: Option<Gender>,
     desc: Option<String>,
     done: Option<bool>,
@@ -94,7 +94,7 @@ async fn init_db() -> anyhow::Result<()> {
             for entry in 1i32..=100 {
                 sqlx::query("INSERT INTO user (name, type) VALUES ($1, $2)")
                     .bind(format!("name-{}", entry))
-                    .bind("Admin")
+                    .bind("ADMIN")
                     .execute(tx.as_mut())
                     .await?;
             }
@@ -173,13 +173,13 @@ mod tests {
         // update
         let mut active_user: ArelActiveUser = user.into();
         active_user.name.set("user2");
-        active_user.r#type.set(Type::Admin);
+        active_user.ty.set(Type::Admin);
         active_user.gender.set(Gender::Male);
         let ret = active_user.save().await?;
         assert_eq!(ret.rows_affected(), 1);
         let user: User = User::query().r#where("id", 2).fetch_one_as().await?;
         assert_eq!(user.name, "user2");
-        assert_eq!(user.r#type, Type::Admin);
+        assert_eq!(user.ty, Type::Admin);
         assert_eq!(user.gender, Some(Gender::Male));
 
         // delete

@@ -14,12 +14,6 @@ pub(crate) fn create_arel_model(input: &crate::ItemInput) -> syn::Result<proc_ma
         new_field.attrs = vec![];
 
         let r#type = &field.ty;
-        // arel(rename="x")
-        // if let Some(rename) = crate::get_path_value(input, Some(&field), "rename", None)? {
-        //     new_field.attrs.push(syn::parse_quote! {
-        //         #[sqlx(rename = #rename)]
-        //     });
-        // }
         if let Some(inner_type) = crate::get_generic_inner_type(r#type, "Option") {
             new_field.ty = syn::parse_quote! { std::option::Option<#inner_type> };
         } else {
@@ -72,18 +66,22 @@ fn impl_trait_sqlx_from_row(input: &crate::ItemInput) -> syn::Result<proc_macro2
                 syn::parse_quote! { std::option::Option<#r#type> }
             }
         };
-        // arel(rename="x")
-        if let Some((rename, _)) = crate::ItemInput::get_field_path_value(field, "arel", "rename", None)? {
-            build_assign_clauses.push(quote::quote!(
-                // user.#ident = row.try_get::<#option_type, _>(#rename).unwrap_or_default();
-                user.#ident = <#option_type as arel::ArelAttributeFromRow>::from_row(&row, #rename).unwrap_or_default();
-            ));
-        } else {
-            build_assign_clauses.push(quote::quote!(
-                // user.#ident = row.try_get::<#option_type, _>(stringify!(#ident)).unwrap_or_default();
-                user.#ident = <#option_type as arel::ArelAttributeFromRow>::from_row(&row, stringify!(#ident)).unwrap_or_default();
-            ));
-        }
+
+        let field_name = {
+            // arel(rename="x")
+            if let Some((rename, _)) = crate::ItemInput::get_field_path_value(field, vec!["arel"], "rename", None)? {
+                rename
+            } else {
+                match ident {
+                    Some(ident) => ident.to_string().trim_start_matches("r#").to_string(),
+                    _ => return Err(syn::Error::new_spanned(field, "Field name can not Blank!")),
+                }
+            }
+        };
+        build_assign_clauses.push(quote::quote!(
+            // user.#ident = row.try_get::<#option_type, _>(#field_name).unwrap_or_default();
+            user.#ident = <#option_type as arel::ArelAttributeFromRow>::from_row(&row, #field_name).unwrap_or_default();
+        ));
     }
 
     let mut generics = input.generics()?.clone();

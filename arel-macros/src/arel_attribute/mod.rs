@@ -40,7 +40,7 @@ fn do_expand(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> 
         let mut new_variant = variant.clone();
         new_variant.attrs = vec![];
 
-        if let Some((_, lit)) = crate::ItemInput::get_path_value_from_metas(metas, "arel_attribute", "value", None)? {
+        if let Some((_, lit)) = crate::ItemInput::get_path_value_from_metas(metas, vec!["arel_attribute"], "value", None)? {
             if let Some(lit) = lit {
                 match &lit {
                     syn::Lit::Int(int) => {
@@ -54,6 +54,15 @@ fn do_expand(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> 
                     }
                     syn::Lit::Str(str) => {
                         let value = str.value();
+                        type_to_value_clauses.push(quote::quote!(
+                            #model_name_ident #type_generics::#new_variant => #value.into()
+                        ));
+                        value_to_type_clauses.push(quote::quote!(
+                           #value => Self::#new_variant
+                        ));
+                    }
+                    syn::Lit::Bool(bool) => {
+                        let value = bool.value();
                         type_to_value_clauses.push(quote::quote!(
                             #model_name_ident #type_generics::#new_variant => #value.into()
                         ));

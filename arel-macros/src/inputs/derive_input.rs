@@ -21,11 +21,11 @@ impl DeriveInput {
 }
 
 impl DeriveInput {
-    pub fn get_field_path_value(field: &syn::Field, root_attr_path: &str, attr_path: &str, allowed_path_names: Option<Vec<&str>>) -> syn::Result<Option<(String, Option<syn::Lit>)>> {
+    pub fn get_field_path_value(field: &syn::Field, root_attr_paths: Vec<&str>, attr_path: &str, allowed_path_names: Option<Vec<&str>>) -> syn::Result<Option<(String, Option<syn::Lit>)>> {
         let metas = field.attrs.iter().map(|f| &f.meta).collect::<Vec<&syn::Meta>>();
         Self::get_path_value_from_metas(metas, root_attr_path, attr_path, allowed_path_names)
     }
-    pub fn get_path_value_from_metas(metas: Vec<&syn::Meta>, root_attr_path: &str, attr_path: &str, allowed_path_names: Option<Vec<&str>>) -> syn::Result<Option<(String, Option<syn::Lit>)>> {
+    pub fn get_path_value_from_metas(metas: Vec<&syn::Meta>, root_attr_paths: Vec<&str>, attr_path: &str, allowed_path_names: Option<Vec<&str>>) -> syn::Result<Option<(String, Option<syn::Lit>)>> {
         for meta in metas {
             match super::get_path_value_from_meta(meta, Some(root_attr_path), attr_path, allowed_path_names.clone())? {
                 Some(v) => return Ok(Some(v)),

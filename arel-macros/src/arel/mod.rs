@@ -37,13 +37,6 @@ fn do_expand(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> 
     for field in input.struct_fields()?.iter() {
         let mut new_field = field.clone();
         new_field.attrs = vec![];
-
-        // arel(rename="x")
-        // if let Some(rename) = crate::get_path_value(input, Some(&field), "rename", None)? {
-        //     new_field.attrs.push(syn::parse_quote! {
-        //         #[sqlx(rename = #rename)]
-        //     });
-        // }
         model_fields.push(new_field);
     }
 
@@ -95,18 +88,22 @@ fn impl_trait_sqlx_from_row(input: &crate::ItemInput) -> syn::Result<proc_macro2
 
         let ident = &field.ident;
         let r#type = &field.ty;
-        // arel(rename="x")
-        if let Some((rename, _)) = crate::ItemInput::get_field_path_value(&field, "arel", "rename", None)? {
-            build_assign_clauses.push(quote::quote!(
-                // user.#ident = row.try_get::<#r#type, _>(#rename).unwrap_or_default();
-                user.#ident = <#r#type as arel::ArelAttributeFromRow>::from_row(&row, #rename).unwrap_or_default();
-            ));
-        } else {
-            build_assign_clauses.push(quote::quote!(
-                // user.#ident = row.try_get::<#r#type, _>(stringify!(#ident)).unwrap_or_default();
-                user.#ident = <#r#type as arel::ArelAttributeFromRow>::from_row(&row, stringify!(#ident)).unwrap_or_default();
-            ));
-        }
+
+        let field_name = {
+            // arel(rename="x")
+            if let Some((rename, _)) = crate::ItemInput::get_field_path_value(field, vec!["arel"], "rename", None)? {
+                rename
+            } else {
+                match ident {
+                    Some(ident) => ident.to_string().trim_start_matches("r#").to_string(),
+                    _ => return Err(syn::Error::new_spanned(field, "Field name can not Blank!")),
+                }
+            }
+        };
+        build_assign_clauses.push(quote::quote!(
+            // user.#ident = row.try_get::<#r#type, _>(#rename).unwrap_or_default();
+            user.#ident = <#r#type as arel::ArelAttributeFromRow>::from_row(&row, #field_name)?;
+        ));
     }
 
     let mut generics = input.generics()?.clone();

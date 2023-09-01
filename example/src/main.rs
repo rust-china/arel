@@ -13,9 +13,9 @@ pub enum Gender {
 
 #[arel_attribute]
 pub enum Type {
-    #[arel_attribute(value = "user")]
+    #[arel_attribute(value = "USER")]
     User,
-    #[arel_attribute(value = "admin")]
+    #[arel_attribute(value = "ADMIN")]
     Admin,
 }
 impl Default for Type {
@@ -46,7 +46,7 @@ async fn init_db() -> anyhow::Result<()> {
             (
                 id             INTEGER PRIMARY KEY NOT NULL,
                 name           VARCHAR(255),
-                type           VARCHAR(255),
+                type           VARCHAR(255) NOT NULL,
                 gender         INT(1) NOT NULL DEFAULT 0,
                 desc           TEXT,
                 done           BOOLEAN NOT NULL DEFAULT 0,
@@ -62,7 +62,7 @@ async fn init_db() -> anyhow::Result<()> {
             for entry in 1i32..=100 {
                 sqlx::query("INSERT INTO user (name, type) VALUES ($1, $2)")
                     .bind(format!("name-{}", entry))
-                    .bind("Admin")
+                    .bind("ADMIN")
                     .execute(tx.as_mut())
                     .await?;
             }

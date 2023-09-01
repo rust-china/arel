@@ -161,11 +161,11 @@ fn impl_fns(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
             // let r#type = &field.ty;
 
             let field_name = {
-                if let Some((rename, _)) = crate::ItemInput::get_field_path_value(field, "arel", "rename", None)? {
+                if let Some((rename, _)) = crate::ItemInput::get_field_path_value(field, vec!["arel"], "rename", None)? {
                     rename
                 } else {
                     match ident {
-                        Some(ident) => ident.to_string(),
+                        Some(ident) => ident.to_string().trim_start_matches("r#").to_string(),
                         _ => return Err(syn::Error::new_spanned(field, "Field name can not Blank!")),
                     }
                 }
@@ -261,11 +261,11 @@ fn impl_fns(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
             // let r#type = &field.ty;
 
             let field_name = {
-                if let Some((rename, _)) = crate::ItemInput::get_field_path_value(field, "arel", "rename", None)? {
+                if let Some((rename, _)) = crate::ItemInput::get_field_path_value(field, vec!["arel"], "rename", None)? {
                     rename
                 } else {
                     match ident {
-                        Some(ident) => ident.to_string(),
+                        Some(ident) => ident.to_string().trim_start_matches("r#").to_string(),
                         _ => return Err(syn::Error::new_spanned(field, "Field name can not Blank!")),
                     }
                 }

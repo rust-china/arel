@@ -37,23 +37,23 @@ impl ItemInput {
             _ => Err(syn::Error::new_spanned(&self.input, "Must Call on Struct")),
         }
     }
-    pub fn get_args_path_value(&self, root_attr_path: &str, attr_path: &str, allowed_path_names: Option<Vec<&str>>) -> syn::Result<Option<(String, Option<syn::Lit>)>> {
+    pub fn get_args_path_value(&self, root_attr_paths: Vec<&str>, attr_path: &str, allowed_path_names: Option<Vec<&str>>) -> syn::Result<Option<(String, Option<syn::Lit>)>> {
         let metas = match &self.args {
             Some(metas) => metas.iter().map(|f| f).collect::<Vec<&syn::Meta>>(),
             None => return Ok(None),
         };
-        Self::get_path_value_from_metas(metas, root_attr_path, attr_path, allowed_path_names)
+        Self::get_path_value_from_metas(metas, root_attr_paths, attr_path, allowed_path_names)
     }
 }
 
 impl ItemInput {
-    pub fn get_field_path_value(field: &syn::Field, root_attr_path: &str, attr_path: &str, allowed_path_names: Option<Vec<&str>>) -> syn::Result<Option<(String, Option<syn::Lit>)>> {
+    pub fn get_field_path_value(field: &syn::Field, root_attr_paths: Vec<&str>, attr_path: &str, allowed_path_names: Option<Vec<&str>>) -> syn::Result<Option<(String, Option<syn::Lit>)>> {
         let metas = field.attrs.iter().map(|f| &f.meta).collect::<Vec<&syn::Meta>>();
-        Self::get_path_value_from_metas(metas, root_attr_path, attr_path, allowed_path_names)
+        Self::get_path_value_from_metas(metas, root_attr_paths, attr_path, allowed_path_names)
     }
-    pub fn get_path_value_from_metas(metas: Vec<&syn::Meta>, root_attr_path: &str, attr_path: &str, allowed_path_names: Option<Vec<&str>>) -> syn::Result<Option<(String, Option<syn::Lit>)>> {
+    pub fn get_path_value_from_metas(metas: Vec<&syn::Meta>, root_attr_paths: Vec<&str>, attr_path: &str, allowed_path_names: Option<Vec<&str>>) -> syn::Result<Option<(String, Option<syn::Lit>)>> {
         for meta in metas {
-            match super::get_path_value_from_meta(meta, Some(root_attr_path), attr_path, allowed_path_names.clone())? {
+            match super::get_path_value_from_meta(meta, root_attr_paths.clone(), attr_path, allowed_path_names.clone())? {
                 Some(v) => return Ok(Some(v)),
                 None => continue,
             }
