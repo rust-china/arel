@@ -3,7 +3,7 @@ use super::Value;
 #[derive(Clone, Debug, PartialEq)]
 pub enum ActiveValue<V>
 where
-    V: Into<Value> + Clone,
+    V: Into<Value> + Clone + PartialEq,
 {
     Changed(V, Box<ActiveValue<V>>),
     Unchanged(V),
@@ -12,7 +12,7 @@ where
 
 impl<V> ActiveValue<V>
 where
-    V: Into<Value> + Clone,
+    V: Into<Value> + Clone + PartialEq,
 {
     ///
     /// # Examples
@@ -35,12 +35,29 @@ where
     where
         UV: Into<V>,
     {
+        let to_v: V = uv.into();
         match self {
-            Self::Changed(nv, _) => {
+            Self::Changed(nv, ov) => {
                 // *self = ActiveValue::Changed(v, ov.clone());
-                *nv = uv.into();
+                match (*ov).as_ref() {
+                    Self::Unchanged(ov) => {
+                        if *ov == to_v {
+                            *self = Self::Unchanged(to_v);
+                        } else {
+                            *nv = to_v;
+                        }
+                    }
+                    _ => {
+                        *nv = to_v;
+                    }
+                }
             }
-            _ => *self = ActiveValue::Changed(uv.into(), Box::new(self.clone())),
+            Self::Unchanged(ov) => {
+                if *ov != to_v {
+                    *self = ActiveValue::Changed(to_v, Box::new(self.clone()));
+                }
+            }
+            _ => *self = ActiveValue::Changed(to_v, Box::new(self.clone())),
         }
         self
     }
