@@ -1,6 +1,8 @@
+mod arel_active_model;
 mod arel_attribute_from_row;
 mod arel_persisted;
 
+pub use arel_active_model::ArelActiveModel;
 pub use arel_attribute_from_row::ArelAttributeFromRow;
 pub use arel_persisted::ArelPersisted;
 

@@ -9,6 +9,7 @@ compile_error!("feature `sqlite` and `postgres` shouldn't be enabled both.");
 compile_error!("feature `mysql` and `postgres` shouldn't be enabled both.");
 
 pub use anyhow;
+pub use async_trait;
 pub use chrono;
 pub use sqlx;
 
@@ -22,7 +23,7 @@ pub mod traits;
 pub mod value;
 pub mod visitor;
 
-pub use crate::traits::{Arel, ArelAttributeFromRow, ArelPersisted, SuperArel};
+pub use crate::traits::{Arel, ArelActiveModel, ArelAttributeFromRow, ArelPersisted, SuperArel};
 pub use bytes::Bytes;
 pub use sql::Sql;
 pub use value::{ActiveValue, Value};

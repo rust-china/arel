@@ -26,10 +26,14 @@ pub(crate) fn create_arel_active_model(input: &crate::ItemInput) -> syn::Result<
         ));
     }
 
-    let impl_fns = impl_fns(input)?;
-
     let impl_from_model = impl_from_model(input)?;
     let impl_from_arel_model = impl_from_arel_model(input)?;
+
+    let impl_trait_to_insert_sql = impl_trait_to_insert_sql(input)?;
+    let impl_trait_to_update_sql = impl_trait_to_update_sql(input)?;
+    let impl_trait_to_destroy_sql = impl_trait_to_destroy_sql(input)?;
+    let impl_trait_save_exec = impl_trait_save_exec(input)?;
+    let impl_trait_destroy_exec = impl_trait_destroy_exec(input)?;
 
     let vis = input.vis()?;
     ret_token_stream.extend(quote::quote!(
@@ -54,11 +58,25 @@ pub(crate) fn create_arel_active_model(input: &crate::ItemInput) -> syn::Result<
                 self.__persisted__
             }
         }
-        impl #impl_generics #arel_active_model_ident #type_generics #where_clause {
-            #impl_fns
-        }
         #impl_from_model
         #impl_from_arel_model
+
+        #[arel::async_trait::async_trait]
+        impl #impl_generics arel::ArelActiveModel for #arel_active_model_ident #type_generics #where_clause {
+            type Model = #struct_ident #type_generics;
+
+            #impl_trait_to_insert_sql
+            #impl_trait_to_update_sql
+            #impl_trait_to_destroy_sql
+            #impl_trait_save_exec
+            async fn save(&mut self) -> arel::anyhow::Result<arel::DatabaseQueryResult> {
+                self.save_exec(Self::Model::pool()?).await
+            }
+            #impl_trait_destroy_exec
+            async fn destroy(&mut self) -> anyhow::Result<arel::DatabaseQueryResult> {
+                self.destroy_exec(Self::Model::pool()?).await
+            }
+        }
     ));
 
     Ok(ret_token_stream)
@@ -146,264 +164,302 @@ fn impl_from_arel_model(input: &crate::ItemInput) -> syn::Result<proc_macro2::To
     Ok(ret_token_stream)
 }
 
-fn impl_fns(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
+fn impl_trait_to_insert_sql(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
     let struct_ident = input.ident()?;
     let model_ident = struct_ident;
     let fields = input.struct_fields()?;
-    let mut ret_token_stream = proc_macro2::TokenStream::new();
 
-    // pub fn to_sql(&self) -> anyhow::Result<crate::Sql>
-    {
-        let mut update_fields_init_clause = proc_macro2::TokenStream::new();
-        let mut insert_fields_init_clause = proc_macro2::TokenStream::new();
-        for field in fields.iter() {
-            let ident = &field.ident;
-            // let r#type = &field.ty;
+    let mut insert_fields_init_clause = proc_macro2::TokenStream::new();
+    for field in fields.iter() {
+        let ident = &field.ident;
+        // let r#type = &field.ty;
 
-            let field_name = {
-                if let Some((rename, _)) = crate::ItemInput::get_field_path_value(field, vec!["arel"], "rename", None)? {
-                    rename
+        let field_name = {
+            if let Some((rename, _)) = crate::ItemInput::get_field_path_value(field, vec!["arel"], "rename", None)? {
+                rename
+            } else {
+                match ident {
+                    Some(ident) => ident.to_string().trim_start_matches("r#").to_string(),
+                    _ => return Err(syn::Error::new_spanned(field, "Field name can not Blank!")),
+                }
+            }
+        };
+
+        insert_fields_init_clause.extend(quote::quote!(
+            let field_name = #field_name;
+            match &self.#ident {
+                arel::ActiveValue::Changed(nv, _) => {
+                    insert_fields.push(field_name);
+                    insert_values.push(nv.into());
+                },
+                _ => ()
+            }
+        ));
+    }
+
+    Ok(quote::quote!(
+        fn to_insert_sql(&self) -> arel::anyhow::Result<arel::Sql> {
+            let primary_keys = {
+                if let Some(keys) = #model_ident::primary_keys() {
+                    keys
+                } else if let Some(key) = #model_ident::primary_key() {
+                    vec![key]
                 } else {
-                    match ident {
-                        Some(ident) => ident.to_string().trim_start_matches("r#").to_string(),
-                        _ => return Err(syn::Error::new_spanned(field, "Field name can not Blank!")),
-                    }
+                    vec![]
                 }
             };
+            if primary_keys.len() == 0 {
+                return Err(anyhow::anyhow!("primary key/keys MUST SET"));
+            }
 
-            update_fields_init_clause.extend(quote::quote!(
-                let field_name = #field_name;
-                match &self.#ident {
-                    arel::ActiveValue::Changed(nv, ov) => {
-                        update_fields.push(field_name);
-                        update_values.push(nv.into());
-                        if primary_keys.contains(&field_name.into()) {
-                            match ov.as_ref() {
-                                arel::ActiveValue::Unchanged(v) => {
-                                    update_where_fields.push(field_name);
-                                    update_where_values.push(v.into());
-                                },
-                                _ => ()
-                            }
+            let table_name = #model_ident::table_name();
+            let mut final_sql = arel::Sql::new("");
 
-                        }
-                    },
-                    arel::ActiveValue::Unchanged(v) => {
-                        if primary_keys.contains(&field_name.into()) {
-                            update_where_fields.push(field_name);
-                            update_where_values.push(v.into());
-                        }
-                    }
-                    _ => ()
-                }
-            ));
+            let mut insert_fields: Vec<&'static str> = vec![];
+            let mut insert_values: Vec<arel::Value> = vec![];
+            #insert_fields_init_clause
 
-            insert_fields_init_clause.extend(quote::quote!(
-                let field_name = #field_name;
-                match &self.#ident {
-                    arel::ActiveValue::Changed(nv, _) => {
-                        insert_fields.push(field_name);
-                        insert_values.push(nv.into());
-                    },
-                    _ => ()
-                }
-            ));
+            if let Some(sql) = arel::statements::insert::Insert::<#model_ident>::new(insert_fields, insert_values).to_sql() {
+                final_sql = sql;
+            }
+            Ok(final_sql)
         }
+    ))
+}
 
-        ret_token_stream.extend(quote::quote!(
-            pub fn to_sql(&self) -> anyhow::Result<arel::Sql> {
-                let primary_keys = {
-                    if let Some(keys) = #model_ident::primary_keys() {
-                        keys
-                    } else if let Some(key) = #model_ident::primary_key() {
-                        vec![key]
-                    } else {
-                        vec![]
-                    }
-                };
-                if primary_keys.len() == 0 {
-                    return Err(anyhow::anyhow!("primary key/keys MUST SET"));
+fn impl_trait_to_update_sql(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
+    let struct_ident = input.ident()?;
+    let model_ident = struct_ident;
+    let fields = input.struct_fields()?;
+
+    let mut update_fields_init_clause = proc_macro2::TokenStream::new();
+    for field in fields.iter() {
+        let ident = &field.ident;
+        // let r#type = &field.ty;
+
+        let field_name = {
+            if let Some((rename, _)) = crate::ItemInput::get_field_path_value(field, vec!["arel"], "rename", None)? {
+                rename
+            } else {
+                match ident {
+                    Some(ident) => ident.to_string().trim_start_matches("r#").to_string(),
+                    _ => return Err(syn::Error::new_spanned(field, "Field name can not Blank!")),
                 }
+            }
+        };
 
-                let table_name = #model_ident::table_name();
-                let mut final_sql = arel::Sql::new("");
-                if self.__persisted__ {
-                    let mut update_fields: Vec<&'static str> = vec![];
-                    let mut update_values: Vec<arel::Value> = vec![];
-                    let mut update_where_fields: Vec<&'static str> = vec![];
-                    let mut update_where_values: Vec<arel::Value> = vec![];
-                    #update_fields_init_clause
+        update_fields_init_clause.extend(quote::quote!(
+            let field_name = #field_name;
+            match &self.#ident {
+                arel::ActiveValue::Changed(nv, ov) => {
+                    update_fields.push(field_name);
+                    update_values.push(nv.into());
+                    if primary_keys.contains(&field_name.into()) {
+                        match ov.as_ref() {
+                            arel::ActiveValue::Unchanged(v) => {
+                                update_where_fields.push(field_name);
+                                update_where_values.push(v.into());
+                            },
+                            _ => ()
+                        }
 
-                    if update_where_fields.len() == 0 {
-                        return Err(anyhow::anyhow!("Update where statement is blank!"));
                     }
-                    if let Some(sql) = arel::statements::update::Update::<#model_ident>::new(update_fields, update_values, update_where_fields, update_where_values).to_sql() {
-                        final_sql = sql;
-                    }
-                } else {
-                    let mut insert_fields: Vec<&'static str> = vec![];
-                    let mut insert_values: Vec<arel::Value> = vec![];
-                    #insert_fields_init_clause
-
-                    if let Some(sql) = arel::statements::insert::Insert::<#model_ident>::new(insert_fields, insert_values).to_sql() {
-                        final_sql = sql;
+                },
+                arel::ActiveValue::Unchanged(v) => {
+                    if primary_keys.contains(&field_name.into()) {
+                        update_where_fields.push(field_name);
+                        update_where_values.push(v.into());
                     }
                 }
-                Ok(final_sql)
+                _ => ()
             }
         ));
     }
-    // pub fn to_destroy_sql(&self) -> anyhow::Result<crate::Sql>
-    {
-        let mut delete_fields_init_clause = proc_macro2::TokenStream::new();
-        for field in fields.iter() {
-            let ident = &field.ident;
-            // let r#type = &field.ty;
 
-            let field_name = {
-                if let Some((rename, _)) = crate::ItemInput::get_field_path_value(field, vec!["arel"], "rename", None)? {
-                    rename
+    Ok(quote::quote!(
+        fn to_update_sql(&self) -> arel::anyhow::Result<arel::Sql> {
+            let primary_keys = {
+                if let Some(keys) = #model_ident::primary_keys() {
+                    keys
+                } else if let Some(key) = #model_ident::primary_key() {
+                    vec![key]
                 } else {
-                    match ident {
-                        Some(ident) => ident.to_string().trim_start_matches("r#").to_string(),
-                        _ => return Err(syn::Error::new_spanned(field, "Field name can not Blank!")),
-                    }
+                    vec![]
                 }
             };
+            if primary_keys.len() == 0 {
+                return Err(anyhow::anyhow!("primary key/keys MUST SET"));
+            }
 
-            delete_fields_init_clause.extend(quote::quote!(
-                let field_name = #field_name;
-                match &self.#ident {
-                    arel::ActiveValue::Changed(nv, ov) => {
-                        if primary_keys.contains(&field_name.into()) {
-                            match ov.as_ref() {
-                                arel::ActiveValue::Unchanged(v) => {
-                                    delete_where_fields.push(field_name);
-                                    delete_where_values.push(v.into());
-                                },
-                                _ => ()
-                            }
+            let table_name = #model_ident::table_name();
+            let mut final_sql = arel::Sql::new("");
 
-                        }
-                    },
-                    arel::ActiveValue::Unchanged(v) => {
-                        if primary_keys.contains(&field_name.into()) {
-                            delete_where_fields.push(field_name);
-                            delete_where_values.push(v.into());
-                        }
-                    }
-                    _ => ()
-                }
-            ));
+            let mut update_fields: Vec<&'static str> = vec![];
+            let mut update_values: Vec<arel::Value> = vec![];
+            let mut update_where_fields: Vec<&'static str> = vec![];
+            let mut update_where_values: Vec<arel::Value> = vec![];
+            #update_fields_init_clause
+
+            if update_where_fields.len() == 0 {
+                return Err(anyhow::anyhow!("Update where statement is blank!"));
+            }
+            if let Some(sql) = arel::statements::update::Update::<#model_ident>::new(update_fields, update_values, update_where_fields, update_where_values).to_sql() {
+                final_sql = sql;
+            }
+
+            Ok(final_sql)
         }
+    ))
+}
 
-        ret_token_stream.extend(quote::quote!(
-            pub fn to_destroy_sql(&self) -> anyhow::Result<arel::Sql> {
-                let primary_keys = {
-                    if let Some(keys) = #model_ident::primary_keys() {
-                        keys
-                    } else if let Some(key) = #model_ident::primary_key() {
-                        vec![key]
-                    } else {
-                        vec![]
-                    }
-                };
-                if primary_keys.len() == 0 {
-                    return Err(anyhow::anyhow!("Primary key/keys MUST SET"));
+fn impl_trait_to_destroy_sql(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
+    let struct_ident = input.ident()?;
+    let model_ident = struct_ident;
+    let fields = input.struct_fields()?;
+
+    let mut delete_fields_init_clause = proc_macro2::TokenStream::new();
+    for field in fields.iter() {
+        let ident = &field.ident;
+        // let r#type = &field.ty;
+
+        let field_name = {
+            if let Some((rename, _)) = crate::ItemInput::get_field_path_value(field, vec!["arel"], "rename", None)? {
+                rename
+            } else {
+                match ident {
+                    Some(ident) => ident.to_string().trim_start_matches("r#").to_string(),
+                    _ => return Err(syn::Error::new_spanned(field, "Field name can not Blank!")),
                 }
+            }
+        };
 
-                let table_name = #model_ident::table_name();
-                let mut final_sql = arel::Sql::new("");
-                if self.__persisted__ {
-                    let mut delete_where_fields: Vec<&'static str> = vec![];
-                    let mut delete_where_values: Vec<arel::Value> = vec![];
-                    #delete_fields_init_clause
+        delete_fields_init_clause.extend(quote::quote!(
+            let field_name = #field_name;
+            match &self.#ident {
+                arel::ActiveValue::Changed(nv, ov) => {
+                    if primary_keys.contains(&field_name.into()) {
+                        match ov.as_ref() {
+                            arel::ActiveValue::Unchanged(v) => {
+                                delete_where_fields.push(field_name);
+                                delete_where_values.push(v.into());
+                            },
+                            _ => ()
+                        }
 
-                    if delete_where_fields.len() == 0 {
-                        return Err(anyhow::anyhow!("Update where statement is blank!"));
                     }
-                    if let Some(sql) = arel::statements::delete::Delete::<#model_ident>::new(delete_where_fields, delete_where_values).to_sql() {
-                        final_sql = sql;
+                },
+                arel::ActiveValue::Unchanged(v) => {
+                    if primary_keys.contains(&field_name.into()) {
+                        delete_where_fields.push(field_name);
+                        delete_where_values.push(v.into());
                     }
+                }
+                _ => ()
+            }
+        ));
+    }
+
+    Ok(quote::quote!(
+        fn to_destroy_sql(&self) -> arel::anyhow::Result<arel::Sql> {
+            let primary_keys = {
+                if let Some(keys) = #model_ident::primary_keys() {
+                    keys
+                } else if let Some(key) = #model_ident::primary_key() {
+                    vec![key]
                 } else {
-                    return Err(anyhow::anyhow!("Model is Not Persisted"));
+                    vec![]
                 }
-                Ok(final_sql)
+            };
+            if primary_keys.len() == 0 {
+                return Err(anyhow::anyhow!("Primary key/keys MUST SET"));
             }
-        ));
-    }
-    // pub async fn save_exec<'a, E>(&mut self) -> anyhow::Result<arel::DatabaseQueryResult> where E: sqlx::Executor<'a, Database = arel::Database>
-    {
-        let mut set_all_to_unchanged_clause = proc_macro2::TokenStream::new();
-        for field in fields.iter() {
-            let ident = &field.ident;
-            // let r#type = &field.ty;
-            set_all_to_unchanged_clause.extend(quote::quote!(
-                if let arel::ActiveValue::Changed(nv, ov) = &self.#ident {
-                    self.#ident = arel::ActiveValue::Unchanged(nv.clone());
+
+            let table_name = #model_ident::table_name();
+            let mut final_sql = arel::Sql::new("");
+            if self.__persisted__ {
+                let mut delete_where_fields: Vec<&'static str> = vec![];
+                let mut delete_where_values: Vec<arel::Value> = vec![];
+                #delete_fields_init_clause
+
+                if delete_where_fields.len() == 0 {
+                    return Err(anyhow::anyhow!("Update where statement is blank!"));
                 }
-            ));
+                if let Some(sql) = arel::statements::delete::Delete::<#model_ident>::new(delete_where_fields, delete_where_values).to_sql() {
+                    final_sql = sql;
+                }
+            } else {
+                return Err(anyhow::anyhow!("Model is Not Persisted"));
+            }
+            Ok(final_sql)
         }
-        ret_token_stream.extend(quote::quote!(
-            pub async fn save_exec<'a, E>(&mut self, executor: E) -> anyhow::Result<arel::DatabaseQueryResult> where E: arel::sqlx::Executor<'a, Database = arel::Database> {
-                match self.to_sql()?.exec(executor).await {
-                    Ok(val) => {
-                        #set_all_to_unchanged_clause
-                        self.__persisted__ = true;
-                        Ok(val)
-                    },
-                    Err(err) => Err(err)
-                }
-            }
-        ));
-    }
-    // pub fn save(&mut self) -> anyhow::Result<arel::DatabaseQueryResult>
-    {
-        ret_token_stream.extend(quote::quote!(
-            pub async fn save(&mut self) -> anyhow::Result<arel::DatabaseQueryResult> {
-                self.save_exec(#model_ident::pool()?).await
-            }
-        ));
-    }
-    // pub async fn destroy_exec<'a, E>(&mut self) -> anyhow::Result<arel::DatabaseQueryResult> where E: sqlx::Executor<'a, Database = arel::Database>
-    {
-        let mut set_all_to_changed_clause = proc_macro2::TokenStream::new();
-        for field in fields.iter() {
-            let ident = &field.ident;
-            // let r#type = &field.ty;
-            set_all_to_changed_clause.extend(quote::quote!(
-                match &mut self.#ident {
-                    arel::ActiveValue::Changed(nv, ov) => {
-                        *ov = std::boxed::Box::new(arel::ActiveValue::NotSet);
-                    },
-                    arel::ActiveValue::Unchanged(v) => {
-                        self.#ident = arel::ActiveValue::Changed(v.clone(), std::boxed::Box::new(arel::ActiveValue::NotSet));
-                    },
-                    _ => ()
-                }
-            ));
-        }
-        ret_token_stream.extend(quote::quote!(
-            pub async fn destroy_exec<'a, E>(&mut self, executor: E) -> anyhow::Result<arel::DatabaseQueryResult> where E: arel::sqlx::Executor<'a, Database = arel::Database> {
-                match self.to_destroy_sql()?.exec(executor).await {
-                    Ok(val) => {
-                        #set_all_to_changed_clause
-                        self.__persisted__ = false;
-                        Ok(val)
-                    },
-                    Err(err) => Err(err)
-                }
-            }
-        ));
-    }
-    // pub fn destroy(&mut self) -> anyhow::Result<arel::DatabaseQueryResult>
-    {
-        ret_token_stream.extend(quote::quote!(
-            pub async fn destroy(&mut self) -> anyhow::Result<arel::DatabaseQueryResult> {
-                self.destroy_exec(#model_ident::pool()?).await
+    ))
+}
+
+fn impl_trait_save_exec(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
+    let fields = input.struct_fields()?;
+
+    let mut set_all_to_unchanged_clause = proc_macro2::TokenStream::new();
+    for field in fields.iter() {
+        let ident = &field.ident;
+        // let r#type = &field.ty;
+        set_all_to_unchanged_clause.extend(quote::quote!(
+            if let arel::ActiveValue::Changed(nv, ov) = &self.#ident {
+                self.#ident = arel::ActiveValue::Unchanged(nv.clone());
             }
         ));
     }
 
-    Ok(ret_token_stream)
+    Ok(quote::quote!(
+        async fn save_exec<'a, E>(&mut self, executor: E) -> arel::anyhow::Result<arel::DatabaseQueryResult> where E: arel::sqlx::Executor<'a, Database = arel::Database> {
+            let save_sql = {
+                if self.__persisted__ {
+                    self.to_update_sql()?
+                } else {
+                    self.to_insert_sql()?
+                }
+            };
+            match save_sql.exec(executor).await {
+                Ok(val) => {
+                    #set_all_to_unchanged_clause
+                    self.__persisted__ = true;
+                    Ok(val)
+                },
+                Err(err) => Err(err)
+            }
+        }
+    ))
+}
+
+fn impl_trait_destroy_exec(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
+    let fields = input.struct_fields()?;
+
+    let mut set_all_to_changed_clause = proc_macro2::TokenStream::new();
+    for field in fields.iter() {
+        let ident = &field.ident;
+        // let r#type = &field.ty;
+        set_all_to_changed_clause.extend(quote::quote!(
+            match &mut self.#ident {
+                arel::ActiveValue::Changed(nv, ov) => {
+                    *ov = std::boxed::Box::new(arel::ActiveValue::NotSet);
+                },
+                arel::ActiveValue::Unchanged(v) => {
+                    self.#ident = arel::ActiveValue::Changed(v.clone(), std::boxed::Box::new(arel::ActiveValue::NotSet));
+                },
+                _ => ()
+            }
+        ));
+    }
+
+    Ok(quote::quote!(
+        async fn destroy_exec<'a, E>(&mut self, executor: E) -> arel::anyhow::Result<arel::DatabaseQueryResult> where E: arel::sqlx::Executor<'a, Database = arel::Database> {
+            match self.to_destroy_sql()?.exec(executor).await {
+                Ok(val) => {
+                    #set_all_to_changed_clause
+                    self.__persisted__ = false;
+                    Ok(val)
+                },
+                Err(err) => Err(err)
+            }
+        }
+    ))
 }
