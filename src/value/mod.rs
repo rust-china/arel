@@ -179,6 +179,20 @@ where
 }
 
 impl Value {
+    pub fn try_get_i32(&self) -> anyhow::Result<i32> {
+        match self {
+            Self::TinyInt(v) => Ok(*v as i32),
+            Self::SmallInt(v) => Ok(*v as i32),
+            Self::Int(v) => Ok(*v),
+            Self::BigInt(v) => Ok(*v as i32),
+            Self::TinyUnsigned(v) => Ok(*v as i32),
+            Self::SmallUnsigned(v) => Ok(*v as i32),
+            Self::Unsigned(v) => Ok(*v as i32),
+            Self::BigUnsigned(v) => Ok(*v as i32),
+            Self::Null => Ok(0),
+            _ => Err(anyhow::anyhow!("value type {:?} cant not to i32", self)),
+        }
+    }
     ///
     /// # Examples
     ///

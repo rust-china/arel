@@ -63,7 +63,7 @@ active_user.name.set("n-1");
 let ret = active_user.save().await?;
 println!("{}", ret.rows_affected());
 
-// delete
+// destroy
 let ret = active_user.destroy().await?;
 println!("{}", ret.rows_affected());
 ```
@@ -144,23 +144,49 @@ let sql = User::query().paginate(1, 10).to_sql();
 
 </details>
 
+---
+
+### Insert
+
 <details>
 <summary>transaction</summary>
 
 ```rust
 User::with_transaction(|tx| {
   Box::pin(async move {
-    for entry in 1i32..=100 {
-      sqlx::query("INSERT INTO user (name) VALUES ($1)")
-          .bind(format!("name-{}", entry))
-          .bind("Admin")
-          .execute(tx.as_mut())
-          .await?;
-    }
+    // for entry in 1i32..=100 {
+    //   sqlx::query("INSERT INTO user (name) VALUES ($1)")
+    //       .bind(format!("name-{}", entry))
+    //       .bind("Admin")
+    //       .execute(tx.as_mut())
+    //       .await?;
+    // }
+    let mut active_user = ArelActiveUser {
+      name: Set("n1"),
+      r#type: Set("ADMIN"),
+      ..Default::default()
+    };
+    active_user.save_exec(tx.as_mut()).await?;
     Ok(None)
   })
 })
 .await?;
+```
+
+</details>
+
+### Update
+
+<details>
+<summary>increment</summary>
+
+```rust
+let user: User = User::query().r#where("id", 1).fetch_one_as().await?;
+let mut active_user: ArelActiveUser = user.into();
+active_user.increment("lock_version", 5, |active_model, step| {
+    let value = active_model.lock_version.try_get_i32().unwrap_or(0) + step;
+    active_model.lock_version.set_unchanged(value);
+}).await?;
 ```
 
 </details>

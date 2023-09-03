@@ -42,6 +42,7 @@ fn do_expand(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> 
 
     let arel_trait_impl_table_name = arel_trait::impl_table_name(input)?;
     let arel_trait_impl_primary_key_or_primary_keys = arel_trait::impl_primary_key_or_primary_keys(input)?;
+    let impl_table_column_name = arel_trait::impl_table_column_name(input)?;
     let model_impl_trait_sqlx_from_row = impl_trait_sqlx_from_row(input)?;
 
     let generics = input.generics()?;
@@ -61,6 +62,7 @@ fn do_expand(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> 
         impl #impl_generics arel::SuperArel for #model_name_ident #type_generics #where_clause {
             #arel_trait_impl_table_name
             #arel_trait_impl_primary_key_or_primary_keys
+            #impl_table_column_name
         }
         impl #impl_generics arel::traits::ArelPersisted for #model_name_ident #type_generics #where_clause {
             fn set_persisted(&mut self, persisted: bool) {

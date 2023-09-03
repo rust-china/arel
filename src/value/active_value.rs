@@ -61,4 +61,20 @@ where
         }
         self
     }
+    pub fn set_unchanged<UV>(&mut self, uv: UV) -> &mut Self
+    where
+        UV: Into<V>,
+    {
+        let to_v: V = uv.into();
+        *self = Self::Unchanged(to_v);
+        self
+    }
+    pub fn try_get_i32(&self) -> anyhow::Result<i32> {
+        let value: crate::Value = match self {
+            Self::Changed(nv, _) => nv.into(),
+            Self::Unchanged(v) => v.into(),
+            Self::NotSet => return Err(anyhow::anyhow!("No Value Set")),
+        };
+        Ok(value.try_get_i32()?)
+    }
 }

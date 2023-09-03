@@ -48,3 +48,34 @@ pub(crate) fn impl_primary_key_or_primary_keys(input: &crate::ItemInput) -> syn:
 
     Ok(ret_token_stream)
 }
+
+pub(crate) fn impl_table_column_name(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
+    let fields = input.struct_fields()?;
+
+    let mut get_column_name_clauses = vec![];
+    for field in fields.iter() {
+        let ident = &field.ident;
+
+        let field_name = {
+            if let Some((rename, _)) = crate::ItemInput::get_field_path_value(field, vec!["arel"], "rename", None)? {
+                rename
+            } else {
+                match ident {
+                    Some(ident) => ident.to_string().trim_start_matches("r#").to_string(),
+                    _ => return Err(syn::Error::new_spanned(field, "Field name can not Blank!")),
+                }
+            }
+        };
+
+        get_column_name_clauses.push(quote::quote!(if struct_key.as_ref() == stringify!(#ident) {
+            return std::option::Option::Some(std::borrow::Cow::Borrowed(#field_name))
+        }));
+    }
+
+    Ok(quote::quote!(
+        fn _table_column_name<K: AsRef<str>>(struct_key: K) -> Option<std::borrow::Cow<'static, str>> {
+            #(#get_column_name_clauses)*
+            None
+        }
+    ))
+}

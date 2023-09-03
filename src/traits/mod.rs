@@ -74,6 +74,12 @@ pub trait SuperArel {
     {
         None
     }
+    fn _table_column_name<K: AsRef<str>>(_struct_key: K) -> Option<std::borrow::Cow<'static, str>>
+    where
+        Self: Sized,
+    {
+        None
+    }
     fn _pool() -> anyhow::Result<&'static sqlx::Pool<crate::Database>>
     where
         Self: Sized,
@@ -101,6 +107,12 @@ pub trait Arel: SuperArel + Sized {
     }
     fn primary_keys() -> Option<Vec<Cow<'static, str>>> {
         Self::_primary_keys()
+    }
+    fn table_column_name<K: AsRef<str>>(key: K) -> Option<std::borrow::Cow<'static, str>>
+    where
+        Self: Sized,
+    {
+        Self::_table_column_name(key)
     }
     fn query() -> crate::manager::SelectManager<Self> {
         crate::manager::SelectManager::<Self>::default()

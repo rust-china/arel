@@ -1,6 +1,9 @@
-pub mod delete;
 pub mod insert;
+
+pub mod increment;
 pub mod update;
+
+pub mod delete;
 
 pub mod filter;
 pub mod group;

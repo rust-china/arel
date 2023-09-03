@@ -175,12 +175,21 @@ mod tests {
         active_user.name.set("user2");
         active_user.ty.set(Type::Admin);
         active_user.gender.set(Gender::Male);
+        active_user
+            .increment("lock_version", 5, |active_model: &mut ArelActiveUser, step| {
+                let value = active_model.lock_version.try_get_i32().unwrap_or(0) + step;
+                active_model.lock_version.set_unchanged(value);
+            })
+            .await?;
+        assert_eq!(active_user.lock_version, arel::ActiveValue::Unchanged(5.into()));
+
         let ret = active_user.save().await?;
         assert_eq!(ret.rows_affected(), 1);
         let user: User = User::query().r#where("id", 2).fetch_one_as().await?;
         assert_eq!(user.name, "user2");
         assert_eq!(user.ty, Type::Admin);
         assert_eq!(user.gender, Some(Gender::Male));
+        assert_eq!(user.lock_version, Some(5));
 
         // delete
         let ret = active_user.destroy().await?;
