@@ -108,7 +108,8 @@ let sql = User::query().join_sql("INNER JOIN wallet on user.id = wallet.user_id"
 <summary>lock</summary>
 
 ```rust
-let sql = User::query().r#where("name", "n1").lock().to_sql();
+// should use in transaction
+let user: User = User::query().r#where("name", "n1").lock().fetch_one_as_exec(tx);
 ```
 
 </details>

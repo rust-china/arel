@@ -1,6 +1,8 @@
 #[async_trait::async_trait]
 pub trait ArelActiveModel {
     type Model;
+
+    fn assign(&mut self, other: &Self) -> &mut Self;
     fn to_insert_sql(&self) -> anyhow::Result<crate::Sql>;
     fn to_update_sql(&self) -> anyhow::Result<crate::Sql>;
     fn to_destroy_sql(&self) -> anyhow::Result<crate::Sql>;

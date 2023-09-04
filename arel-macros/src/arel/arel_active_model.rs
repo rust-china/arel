@@ -29,6 +29,7 @@ pub(crate) fn create_arel_active_model(input: &crate::ItemInput) -> syn::Result<
     let impl_from_model = impl_from_model(input)?;
     let impl_from_arel_model = impl_from_arel_model(input)?;
 
+    let impl_trait_assign = impl_trait_assign(input)?;
     let impl_trait_to_insert_sql = impl_trait_to_insert_sql(input)?;
     let impl_trait_to_update_sql = impl_trait_to_update_sql(input)?;
     let impl_trait_to_destroy_sql = impl_trait_to_destroy_sql(input)?;
@@ -67,6 +68,7 @@ pub(crate) fn create_arel_active_model(input: &crate::ItemInput) -> syn::Result<
         impl #impl_generics arel::ArelActiveModel for #arel_active_model_ident #type_generics #where_clause {
             type Model = #struct_ident #type_generics;
 
+            #impl_trait_assign
             #impl_trait_to_insert_sql
             #impl_trait_to_update_sql
             #impl_trait_to_destroy_sql
@@ -167,6 +169,33 @@ fn impl_from_arel_model(input: &crate::ItemInput) -> syn::Result<proc_macro2::To
     ));
 
     Ok(ret_token_stream)
+}
+
+fn impl_trait_assign(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
+    let fields = input.struct_fields()?;
+
+    let mut assign_fields_clause = vec![];
+    for field in fields.iter() {
+        let ident = &field.ident;
+        assign_fields_clause.push(quote::quote!(
+            match &other.#ident {
+                arel::ActiveValue::Changed(nv, _) => {
+                    self.#ident.set(nv.clone());
+                }
+                arel::ActiveValue::Unchanged(v) => {
+                    self.#ident.set(v.clone());
+                }
+                arel::ActiveValue::NotSet => ()
+            }
+        ));
+    }
+
+    Ok(quote::quote!(
+        fn assign(&mut self, other: &Self) -> &mut Self {
+            #(#assign_fields_clause)*
+            self
+        }
+    ))
 }
 
 fn impl_trait_to_insert_sql(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {

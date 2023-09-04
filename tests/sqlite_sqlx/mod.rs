@@ -199,6 +199,12 @@ mod tests {
 
         // insert
         let mut active_user = ArelActiveUser { expired_at: Set(None), ..active_user };
+        active_user.assign(&ArelActiveUser {
+            gender: Set(Gender::Male),
+            ..Default::default()
+        });
+        assert_eq!(active_user.gender, Set(Gender::Male));
+
         let ret = active_user.save().await?;
         assert_eq!(ret.rows_affected(), 1);
         let total_count = User::query().select_sql("COUNT(*)").fetch_count().await?;
