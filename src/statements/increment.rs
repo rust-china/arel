@@ -5,7 +5,7 @@ use std::{fmt::Debug, marker::PhantomData};
 #[derive(Debug)]
 pub struct Increment<M: Arel> {
     field: String,
-    by: i32,
+    step: i32,
     where_fields: Vec<String>,
     where_values: Vec<crate::Value>,
     _marker: PhantomData<M>,
@@ -16,10 +16,10 @@ impl<M: Arel> ArelStatement for Increment<M> {
         let table_name = M::table_name();
         let full_column_name = format!(r#""{}"."{}""#, table_name, self.field);
         let mut final_sql = crate::Sql::new(format!(r#"UPDATE "{}" SET "{}" = COALESCE({}, 0)"#, table_name, self.field, full_column_name));
-        if self.by >= 0 {
-            final_sql.push_str(&format!(" + {}", self.by));
+        if self.step >= 0 {
+            final_sql.push_str(&format!(" + {}", self.step));
         } else {
-            final_sql.push_str(&format!(" - {}", self.by.abs()));
+            final_sql.push_str(&format!(" - {}", self.step.abs()));
         }
 
         final_sql.push_str(" WHERE ");
@@ -39,10 +39,10 @@ impl<M: Arel> ArelStatement for Increment<M> {
 }
 
 impl<M: Arel> Increment<M> {
-    pub fn new<F: Into<String>, V: Into<crate::Value>>(field: String, by: i32, where_fields: Vec<F>, where_values: Vec<V>) -> Self {
+    pub fn new<F: Into<String>, V: Into<crate::Value>>(field: String, step: i32, where_fields: Vec<F>, where_values: Vec<V>) -> Self {
         Self {
             field,
-            by,
+            step,
             where_fields: where_fields.into_iter().map(|f| f.into()).collect(),
             where_values: where_values.into_iter().map(|v| v.into()).collect(),
             _marker: PhantomData::<M>,

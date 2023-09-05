@@ -59,7 +59,11 @@ let uesrs: Vec<ArelUser> = User::query().r#where("id", vec![1, 2, 3]).fetch_all_
 // update
 let user: User = User::query().fetch_one_as().await?;
 let mut active_user: ArelActiveUser = user.into();
-active_user.name.set("n-1");
+// active_user.name.set("n-1");
+active_user.assign(&ArelActiveUser {
+    name: Set("n-1"),
+    ..Default::default()
+});
 let ret = active_user.save().await?;
 println!("{}", ret.rows_affected());
 
