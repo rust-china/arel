@@ -1,4 +1,7 @@
+mod ops;
+
 use super::Value;
+use std::fmt::Debug;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ActiveValue<V>
@@ -31,11 +34,11 @@ where
     /// assert_eq!(changed.set(1), &ActiveValue::Changed(1, Box::new(ActiveValue::NotSet)));
     /// assert_eq!(changed.set(2), &ActiveValue::Changed(2, Box::new(ActiveValue::NotSet)));
     /// ```
-    pub fn set<UV>(&mut self, uv: UV) -> &mut Self
+    pub fn set<ToV>(&mut self, v: ToV) -> &mut Self
     where
-        UV: Into<V>,
+        ToV: Into<V>,
     {
-        let to_v: V = uv.into();
+        let to_v: V = v.into();
         match self {
             Self::Changed(nv, ov) => {
                 // *self = ActiveValue::Changed(v, ov.clone());
@@ -61,13 +64,20 @@ where
         }
         self
     }
-    pub fn set_unchanged<UV>(&mut self, uv: UV) -> &mut Self
+    pub fn set_unchanged<ToV>(&mut self, v: ToV) -> &mut Self
     where
-        UV: Into<V>,
+        ToV: Into<V>,
     {
-        let to_v: V = uv.into();
+        let to_v: V = v.into();
         *self = Self::Unchanged(to_v);
         self
+    }
+    pub fn try_get_value(&self) -> anyhow::Result<&V> {
+        match self {
+            Self::Changed(nv, _) => Ok(nv),
+            Self::Unchanged(v) => Ok(v),
+            Self::NotSet => return Err(anyhow::anyhow!("No Value Set")),
+        }
     }
     pub fn try_get_i32(&self) -> anyhow::Result<i32> {
         let value: crate::Value = match self {

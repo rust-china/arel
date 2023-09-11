@@ -100,9 +100,9 @@ impl std::fmt::Display for JoinType {
 }
 
 #[allow(non_snake_case)]
-pub fn Set<V, UV: Into<V>>(uv: UV) -> ActiveValue<V>
+pub fn Set<V, ToV: Into<V>>(v: ToV) -> ActiveValue<V>
 where
     V: Into<Value> + Clone + PartialEq,
 {
-    ActiveValue::Changed(uv.into(), Box::new(ActiveValue::NotSet))
+    ActiveValue::Changed(v.into(), Box::new(ActiveValue::NotSet))
 }
