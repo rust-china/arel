@@ -1,5 +1,6 @@
 pub(crate) fn create_arel_active_model(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
     let struct_ident = input.ident()?;
+    let arel_model_ident = syn::Ident::new(&format!("Arel{}", struct_ident.to_string()), struct_ident.span());
     let arel_active_model_ident = syn::Ident::new(&format!("ArelActive{}", struct_ident.to_string()), struct_ident.span());
 
     let mut ret_token_stream = proc_macro2::TokenStream::new();
@@ -67,6 +68,7 @@ pub(crate) fn create_arel_active_model(input: &crate::ItemInput) -> syn::Result<
         #[arel::async_trait::async_trait]
         impl #impl_generics arel::ArelActiveModel for #arel_active_model_ident #type_generics #where_clause {
             type Model = #struct_ident #type_generics;
+            type ArelModel = #arel_model_ident #type_generics;
 
             #impl_trait_assign
             #impl_trait_to_insert_sql
@@ -81,8 +83,12 @@ pub(crate) fn create_arel_active_model(input: &crate::ItemInput) -> syn::Result<
                 self.destroy_exec(Self::Model::pool()?).await
             }
             #impl_trait_increment_exec
-            async fn increment<K: ToString + Send, F: Send>(&mut self, key: K, step: i32, update_self_cb: F) -> arel::anyhow::Result<arel::DatabaseQueryResult> where F: FnOnce(&mut Self, i32) -> () {
-                self.increment_exec(key, step, update_self_cb, Self::Model::pool()?).await
+            async fn increment_save<K: std::marker::Send, V: std::marker::Send + std::marker::Sync, F: std::marker::Send>(&mut self, key: K, step: V, update_self_cb: F) -> arel::anyhow::Result<arel::DatabaseQueryResult>
+            where
+                K: ToString,
+                V: std::fmt::Debug,
+                F: FnOnce(&mut Self) -> () {
+                self.increment_save_exec(key, step, update_self_cb, Self::Model::pool()?).await
             }
         }
     ));
@@ -540,9 +546,11 @@ fn impl_trait_increment_exec(input: &crate::ItemInput) -> syn::Result<proc_macro
     }
 
     Ok(quote::quote!(
-        async fn increment_exec<'a, K: ToString + Send, F: Send, E>(&mut self, key: K, step: i32, update_self_cb: F, executor: E) -> arel::anyhow::Result<arel::DatabaseQueryResult>
+        async fn increment_save_exec<'a, K: std::marker::Send, V: std::marker::Send + std::marker::Sync, F: std::marker::Send, E>(&mut self, key: K, step: V, update_self_cb: F, executor: E) -> arel::anyhow::Result<arel::DatabaseQueryResult>
         where
-            F: FnOnce(&mut Self, i32) -> (),
+            K: ToString,
+            V: std::fmt::Debug,
+            F: FnOnce(&mut Self) -> (),
             E: arel::sqlx::Executor<'a, Database = arel::Database>,
         {
             let key = key.to_string();
@@ -571,13 +579,13 @@ fn impl_trait_increment_exec(input: &crate::ItemInput) -> syn::Result<proc_macro
             let mut update_where_values: Vec<arel::Value> = vec![];
             #update_fields_init_clause
 
-            let increment_statement = arel::statements::increment::Increment::<Self::Model>::new(column_name, step, update_where_fields, update_where_values);
+            let increment_statement = arel::statements::increment::Increment::<Self::Model, V>::new(column_name, step, update_where_fields, update_where_values);
             if let Some(increment_sql) =increment_statement.to_sql() {
                 if self.__persisted__ {
                     match increment_sql.exec(executor).await {
                         Ok(val) => {
                             if val.rows_affected() >= 1 {
-                                update_self_cb(self, step);
+                                update_self_cb(self);
                             }
                             Ok(val)
                         }

@@ -64,12 +64,11 @@ where
         }
         self
     }
-    pub fn set_unchanged<ToV>(&mut self, v: ToV) -> &mut Self
-    where
-        ToV: Into<V>,
-    {
-        let to_v: V = v.into();
-        *self = Self::Unchanged(to_v);
+    pub fn into_unchanged(&mut self) -> &mut Self {
+        match self {
+            Self::Changed(nv, _) => *self = Self::Unchanged(nv.clone()),
+            _ => (),
+        }
         self
     }
     pub fn try_get_value(&self) -> anyhow::Result<&V> {

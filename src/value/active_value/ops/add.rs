@@ -27,6 +27,7 @@ where
         self
     }
 }
+
 impl<V> AddAssign<ActiveValue<V>> for ActiveValue<V>
 where
     V: Into<Value> + Copy + PartialEq + Add<V, Output = V> + Default,

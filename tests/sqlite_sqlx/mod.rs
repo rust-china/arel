@@ -81,7 +81,7 @@ async fn init_db() -> anyhow::Result<()> {
                 gender         INT(1),
                 desc           TEXT,
                 done           BOOLEAN NOT NULL DEFAULT 0,
-                lock_version   INT(11) NOT NULL DEFAULT 0,
+                lock_version   INT(11) NOT NULL DEFAULT 1,
                 expired_at     DATETIME
             );",
     )
@@ -176,12 +176,12 @@ mod tests {
         active_user.ty.set(Type::Admin);
         active_user.gender.set(Gender::Male);
         active_user
-            .increment("lock_version", 5, |active_model: &mut ArelActiveUser, step| {
-                let value = active_model.lock_version.try_get_i32().unwrap_or(0) + step;
-                active_model.lock_version.set_unchanged(value);
+            .decrement_save("lock_version", 5, |active_model: &mut ArelActiveUser| {
+                let value = active_model.lock_version.try_get_i32().unwrap_or(0) - 5;
+                active_model.lock_version.set(value).into_unchanged();
             })
             .await?;
-        assert_eq!(active_user.lock_version, arel::ActiveValue::Unchanged(5.into()));
+        assert_eq!(active_user.lock_version, arel::ActiveValue::Unchanged((-4).into()));
 
         let ret = active_user.save().await?;
         assert_eq!(ret.rows_affected(), 1);
@@ -189,7 +189,7 @@ mod tests {
         assert_eq!(user.name, "user2");
         assert_eq!(user.ty, Type::Admin);
         assert_eq!(user.gender, Some(Gender::Male));
-        assert_eq!(user.lock_version, Some(5));
+        assert_eq!(user.lock_version, Some(-4));
 
         // delete
         let ret = active_user.destroy().await?;

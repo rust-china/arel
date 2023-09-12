@@ -1,26 +1,27 @@
 use crate::prelude::Arel;
 use crate::statements::ArelStatement;
-use std::{fmt::Debug, marker::PhantomData};
+use std::{fmt::Debug, marker::PhantomData, marker::Send};
 
 #[derive(Debug)]
-pub struct Increment<M: Arel> {
+pub struct Increment<M: Arel, T: Debug + Send> {
     field: String,
-    step: i32,
+    step: T,
     where_fields: Vec<String>,
     where_values: Vec<crate::Value>,
     _marker: PhantomData<M>,
 }
 
-impl<M: Arel> ArelStatement for Increment<M> {
+impl<M: Arel, T: Debug + Send> ArelStatement for Increment<M, T> {
     fn to_sql(&self) -> Option<crate::Sql> {
         let table_name = M::table_name();
         let full_column_name = format!(r#""{}"."{}""#, table_name, self.field);
         let mut final_sql = crate::Sql::new(format!(r#"UPDATE "{}" SET "{}" = COALESCE({}, 0)"#, table_name, self.field, full_column_name));
-        if self.step >= 0 {
-            final_sql.push_str(&format!(" + {}", self.step));
-        } else {
-            final_sql.push_str(&format!(" - {}", self.step.abs()));
-        }
+        // if self.step >= 0 {
+        //     final_sql.push_str(&format!(" + {}", self.step));
+        // } else {
+        //     final_sql.push_str(&format!(" - {}", self.step.abs()));
+        // }
+        final_sql.push_str(&format!(" + ({:?})", self.step));
 
         final_sql.push_str(" WHERE ");
         let len = self.where_fields.len();
@@ -33,13 +34,12 @@ impl<M: Arel> ArelStatement for Increment<M> {
                 final_sql.push_str(" AND ");
             }
         }
-
         Some(final_sql)
     }
 }
 
-impl<M: Arel> Increment<M> {
-    pub fn new<F: Into<String>, V: Into<crate::Value>>(field: String, step: i32, where_fields: Vec<F>, where_values: Vec<V>) -> Self {
+impl<M: Arel, T: Debug + Send> Increment<M, T> {
+    pub fn new<F: Into<String>, V: Into<crate::Value>>(field: String, step: T, where_fields: Vec<F>, where_values: Vec<V>) -> Self {
         Self {
             field,
             step,

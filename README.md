@@ -188,9 +188,9 @@ User::with_transaction(|tx| {
 ```rust
 let user: User = User::query().r#where("id", 1).fetch_one_as().await?;
 let mut active_user: ArelActiveUser = user.into();
-active_user.increment("lock_version", 5, |active_model, step| {
-    let value = active_model.lock_version.try_get_i32().unwrap_or(0) + step;
-    active_model.lock_version.set_unchanged(value);
+active_user.increment_save("lock_version", 5, |active_model| {
+    let value = active_model.lock_version.try_get_i32().unwrap_or(0) + 5;
+    active_model.lock_version.set(value).into_unchanged();
 }).await?;
 ```
 
