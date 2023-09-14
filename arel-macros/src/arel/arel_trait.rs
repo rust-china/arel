@@ -1,7 +1,7 @@
 pub(crate) fn impl_table_name(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
     let mut ret_token_stream = proc_macro2::TokenStream::new();
 
-    if let Some((table_name, _)) = input.get_args_path_value(vec!["arel"], "table_name", None)? {
+    if let Some((table_name, _)) = input.get_args_path_value(vec![], "table_name", None)? {
         ret_token_stream.extend(quote::quote!(
             fn _table_name() -> std::borrow::Cow<'static, str> {
                 std::borrow::Cow::Borrowed(#table_name)

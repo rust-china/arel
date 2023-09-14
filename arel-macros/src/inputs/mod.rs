@@ -4,7 +4,7 @@ mod item_input;
 // pub use derive_input::DeriveInput;
 pub use item_input::ItemInput;
 
-use syn::parse::Parser;
+use syn::{parse::Parser, spanned::Spanned};
 
 fn get_path_value_from_meta(meta: &syn::Meta, root_attr_paths: Vec<&str>, attr_path: &str, allowed_path_names: Option<Vec<&str>>) -> syn::Result<Option<(String, Option<syn::Lit>)>> {
     match root_attr_paths.split_first() {
@@ -12,8 +12,8 @@ fn get_path_value_from_meta(meta: &syn::Meta, root_attr_paths: Vec<&str>, attr_p
             let sub_root_attr_paths: Vec<&str> = sub_root_attr_paths.into_iter().map(|v| *v).collect();
             match meta {
                 syn::Meta::List(list) => {
-                    if let Some(p) = list.path.segments.first() {
-                        if p.ident == root_attr_path {
+                    for segment in list.path.segments.iter() {
+                        if segment.ident == root_attr_path {
                             let nested_metas = syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated.parse2(list.tokens.clone()).unwrap();
                             for meta in nested_metas.iter() {
                                 match get_path_value_from_meta(meta, sub_root_attr_paths.clone(), attr_path, allowed_path_names.clone())? {
@@ -61,6 +61,13 @@ fn get_path_value_from_meta(meta: &syn::Meta, root_attr_paths: Vec<&str>, attr_p
                             }
                         }
                         _ => (),
+                    }
+                }
+            }
+            syn::Meta::Path(path) => {
+                for segment in path.segments.iter() {
+                    if segment.ident == attr_path {
+                        return Ok(Some(("true".to_string(), Some(syn::Lit::Bool(syn::LitBool { value: true, span: path.span() })))));
                     }
                 }
             }
