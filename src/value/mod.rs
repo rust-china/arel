@@ -2,50 +2,55 @@ mod eq;
 mod from;
 mod ops;
 
+pub mod sub_value;
+
+use serde::{Deserialize, Serialize};
 use std::cmp::PartialEq;
 
 // https://docs.rs/sqlx/latest/sqlx/types/index.html
-#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-pub enum Value<T: Sized> {
-    Bool(bool),
-    TinyInt(i8),
-    SmallInt(i16),
-    Int(i32),
-    BigInt(i64),
-    TinyUnsigned(u8),
-    SmallUnsigned(u16),
-    Unsigned(u32),
-    BigUnsigned(u64),
-    Float(f32),
-    Double(f64),
-    Char(char),
-    String(String),
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum Value {
+    Bool(sub_value::ValueBool),
+    TinyInt(sub_value::ValueTinyInt),
+    SmallInt(sub_value::ValueSmallInt),
+    Int(sub_value::ValueInt),
+    BigInt(sub_value::ValueBigInt),
 
-    #[allow(clippy::box_collection)]
-    Bytes(bytes::Bytes),
+    #[cfg(any(feature = "sqlite", feature = "mysql"))]
+    TinyUnsigned(sub_value::ValueTinyUnsigned),
+    #[cfg(any(feature = "sqlite", feature = "mysql"))]
+    SmallUnsigned(sub_value::ValueSmallUnsigned),
+    #[cfg(any(feature = "sqlite", feature = "mysql"))]
+    Unsigned(sub_value::ValueUnsigned),
+    #[cfg(any(feature = "mysql"))]
+    BigUnsigned(sub_value::ValueBigUnsigned),
 
-    Array(T),
+    Float(sub_value::ValueFloat),
+    Double(sub_value::ValueDouble),
+
+    String(sub_value::ValueString),
+
+    Bytes(sub_value::ValueBytes),
+
+    Array(sub_value::ValueArray),
 
     #[cfg(feature = "with-json")]
     #[cfg_attr(docsrs, doc(cfg(feature = "with-json")))]
-    Json(serde_json::Value),
+    Json(sub_value::ValueJson),
 
     #[cfg(feature = "with-chrono")]
     #[cfg_attr(docsrs, doc(cfg(feature = "with-chrono")))]
-    ChronoTimestamp(chrono::DateTime<chrono::FixedOffset>),
+    ChronoTimestamp(sub_value::ValueChronoTimestamp),
 
     #[cfg(feature = "with-chrono")]
     #[cfg_attr(docsrs, doc(cfg(feature = "with-chrono")))]
-    ChronoDateTime(chrono::NaiveDateTime),
+    ChronoDateTime(sub_value::ValueChronoDateTime),
 
     #[cfg(feature = "with-chrono")]
     #[cfg_attr(docsrs, doc(cfg(feature = "with-chrono")))]
-    ChronoDate(chrono::NaiveDate),
+    ChronoDate(sub_value::ValueChronoDate),
 
     #[cfg(feature = "with-chrono")]
     #[cfg_attr(docsrs, doc(cfg(feature = "with-chrono")))]
-    ChronoTime(chrono::NaiveTime),
-
-    Null,
-    _Unreachable(std::marker::PhantomData<T>),
+    ChronoTime(sub_value::ValueChronoTime),
 }

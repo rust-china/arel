@@ -10,6 +10,7 @@ compile_error!("feature `mysql` and `postgres` shouldn't be enabled both.");
 pub mod db;
 pub mod error;
 pub mod prelude;
+pub mod sql;
 pub mod traits;
 pub mod value;
 
@@ -21,7 +22,7 @@ pub use sqlx;
 
 pub use bytes::Bytes;
 pub use error::Error;
-pub use value::Value;
+pub use value::{sub_value, Value};
 
 pub use traits::{arel_attribute_from_row::ArelAttributeFromRow, Arel, SuperArel};
 pub type Result<T> = std::result::Result<T, crate::Error>;

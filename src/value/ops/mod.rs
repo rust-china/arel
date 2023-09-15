@@ -1,20 +1,20 @@
 /// +
 mod add;
 
-/// -
+// /// -
 mod sub;
 
-/// x
+// /// x
 mod mul;
 
-/// /
+// /// /
 mod div;
 
-/// %
+// /// %
 mod rem;
 
-/// * -1
+// /// * -1
 mod neg;
 
-/// !
+// /// !
 mod not;

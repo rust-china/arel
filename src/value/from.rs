@@ -1,401 +1,130 @@
-use super::Value;
-use std::borrow::Cow;
+use super::{sub_value, Value};
 
-/// # Examples
-/// Value<bool>
-/// ```
-/// use arel::prelude::*;
-/// let v: arel::Value<bool> = true.into();
-/// assert_eq!(v, arel::Value::Bool(true));
-///```
-impl From<bool> for Value<bool> {
-    fn from(val: bool) -> Self {
+impl From<sub_value::ValueBool> for Value {
+    fn from(val: sub_value::ValueBool) -> Self {
         Value::Bool(val)
     }
 }
-/// # Examples
-/// Value<i8>
-/// ```
-/// use arel::prelude::*;
-/// let v: arel::Value<i8> = 1.into();
-/// assert_eq!(v, arel::Value::TinyInt(1));
-///```
-impl From<i8> for Value<i8> {
-    fn from(val: i8) -> Self {
+
+impl From<sub_value::ValueTinyInt> for Value {
+    fn from(val: sub_value::ValueTinyInt) -> Self {
         Value::TinyInt(val)
     }
 }
-/// # Examples
-/// Value<i16>
-/// ```
-/// use arel::prelude::*;
-/// let v: arel::Value<i16> = 1.into();
-/// assert_eq!(v, arel::Value::SmallInt(1));
-///```
-impl From<i16> for Value<i16> {
-    fn from(val: i16) -> Self {
+
+impl From<sub_value::ValueSmallInt> for Value {
+    fn from(val: sub_value::ValueSmallInt) -> Self {
         Value::SmallInt(val)
     }
 }
-/// # Examples
-/// Value<i32>
-/// ```
-/// use arel::prelude::*;
-/// let v: arel::Value<i32> = 1.into();
-/// assert_eq!(v, arel::Value::Int(1));
-///```
-impl From<i32> for Value<i32> {
-    fn from(val: i32) -> Self {
+
+impl From<sub_value::ValueInt> for Value {
+    fn from(val: sub_value::ValueInt) -> Self {
         Value::Int(val)
     }
 }
-/// # Examples
-/// Value<i64>
-/// ```
-/// use arel::prelude::*;
-/// let v: arel::Value<i64> = 1.into();
-/// assert_eq!(v, arel::Value::BigInt(1));
-///```
-impl From<i64> for Value<i64> {
-    fn from(val: i64) -> Self {
+
+impl From<sub_value::ValueBigInt> for Value {
+    fn from(val: sub_value::ValueBigInt) -> Self {
         Value::BigInt(val)
     }
 }
-/// # Examples
-/// Value<u8>
-/// ```
-/// use arel::prelude::*;
-/// let v: arel::Value<u8> = 1.into();
-/// assert_eq!(v, arel::Value::TinyUnsigned(1));
-///```
-impl From<u8> for Value<u8> {
-    fn from(val: u8) -> Self {
+
+#[cfg(any(feature = "sqlite", feature = "mysql"))]
+impl From<sub_value::ValueTinyUnsigned> for Value {
+    fn from(val: sub_value::ValueTinyUnsigned) -> Self {
         Value::TinyUnsigned(val)
     }
 }
-/// # Examples
-/// Value<u16>
-/// ```
-/// use arel::prelude::*;
-/// let v: arel::Value<u16> = 1.into();
-/// assert_eq!(v, arel::Value::SmallUnsigned(1));
-///```
-impl From<u16> for Value<u16> {
-    fn from(val: u16) -> Self {
+#[cfg(any(feature = "sqlite", feature = "mysql"))]
+impl From<sub_value::ValueSmallUnsigned> for Value {
+    fn from(val: sub_value::ValueSmallUnsigned) -> Self {
         Value::SmallUnsigned(val)
     }
 }
-/// # Examples
-/// Value<u32>
-/// ```
-/// use arel::prelude::*;
-/// let v: arel::Value<u32> = 1.into();
-/// assert_eq!(v, arel::Value::Unsigned(1));
-///```
-impl From<u32> for Value<u32> {
-    fn from(val: u32) -> Self {
-        Value::Unsigned(val)
+#[cfg(any(feature = "sqlite", feature = "mysql"))]
+impl From<sub_value::ValueUnsigned> for Value {
+    fn from(val: sub_value::ValueUnsigned) -> Self {
+        Value::Unsigned(val.into())
     }
 }
-/// # Examples
-/// Value<u64>
-/// ```
-/// use arel::prelude::*;
-/// let v: arel::Value<u64> = 1.into();
-/// assert_eq!(v, arel::Value::BigUnsigned(1));
-///```
-impl From<u64> for Value<u64> {
-    fn from(val: u64) -> Self {
-        Value::BigUnsigned(val)
+#[cfg(any(feature = "mysql"))]
+impl From<sub_value::ValueBigUnsigned> for Value {
+    fn from(val: sub_value::ValueBigUnsigned) -> Self {
+        Value::BigUnsigned(val.into())
     }
 }
-/// # Examples
-/// Value<f32>
-/// ```
-/// use arel::prelude::*;
-/// let v: arel::Value<f32> = 1.0.into();
-/// assert_eq!(v, arel::Value::Float(1.0));
-///```
-impl From<f32> for Value<f32> {
-    fn from(val: f32) -> Self {
+
+impl From<sub_value::ValueFloat> for Value {
+    fn from(val: sub_value::ValueFloat) -> Self {
         Value::Float(val)
     }
 }
-/// # Examples
-/// Value<f64>
-/// ```
-/// use arel::prelude::*;
-/// let v: arel::Value<f64> = 1.0.into();
-/// assert_eq!(v, arel::Value::Double(1.0));
-///```
-impl From<f64> for Value<f64> {
-    fn from(val: f64) -> Self {
+
+impl From<sub_value::ValueDouble> for Value {
+    fn from(val: sub_value::ValueDouble) -> Self {
         Value::Double(val)
     }
 }
-/// # Examples
-/// Value<char>
-/// ```
-/// use arel::prelude::*;
-/// let v: arel::Value<char> = 'a'.into();
-/// assert_eq!(v, arel::Value::Char('a'));
-///```
-impl From<char> for Value<char> {
-    fn from(val: char) -> Self {
-        Value::Char(val)
-    }
-}
-/// # Examples
-/// Value<String>
-/// ```
-/// use arel::prelude::*;
-/// let v: arel::Value<String> = "abc".into();
-/// assert_eq!(v, arel::Value::String("abc".to_string()));
-///```
-impl From<&str> for Value<String> {
-    fn from(val: &str) -> Self {
-        let string: String = val.into();
-        Value::String(string)
-    }
-}
-/// # Examples
-/// Value<String>
-/// ```
-/// use arel::prelude::*;
-/// let v: arel::Value<String> = "abc".to_string().into();
-/// assert_eq!(v, arel::Value::String("abc".to_string()));
-///```
-impl From<String> for Value<String> {
-    fn from(val: String) -> Self {
+
+impl From<sub_value::ValueString> for Value {
+    fn from(val: sub_value::ValueString) -> Self {
         Value::String(val)
     }
 }
-/// # Examples
-/// Value<String>
-/// ```
-/// use arel::prelude::*;
-/// use std::borrow::Cow;
-/// let v: arel::Value<String> = Cow::Borrowed("abc").into();
-/// assert_eq!(v, arel::Value::String("abc".to_string()));
-///```
-impl From<Cow<'_, str>> for Value<String> {
-    fn from(val: Cow<'_, str>) -> Self {
-        val.into_owned().into()
-    }
-}
-/// # Examples
-/// Value<bytes::Bytes>
-/// ```
-/// use arel::prelude::*;
-/// let v: arel::Value<arel::Bytes> = arel::Bytes::from("abc").into();
-/// assert_eq!(v, arel::Value::Bytes(arel::Bytes::from("abc")));
-///```
-impl From<bytes::Bytes> for Value<bytes::Bytes> {
-    fn from(val: bytes::Bytes) -> Self {
+
+impl From<sub_value::ValueBytes> for Value {
+    fn from(val: sub_value::ValueBytes) -> Self {
         Value::Bytes(val)
     }
 }
 
-/// # Examples
-/// Value<Vec<T>>
-/// ```
-/// use arel::prelude::*;
-/// let v: arel::Value<Vec<i32>> = vec![1,2,3].into();
-/// assert_eq!(v, arel::Value::Array(vec![1,2,3]));
-///```
-impl<T: Into<Value<T>>> From<Vec<T>> for Value<Vec<T>> {
-    fn from(vals: Vec<T>) -> Self {
+impl From<sub_value::ValueArray> for Value {
+    fn from(vals: sub_value::ValueArray) -> Self {
         Value::Array(vals)
     }
 }
-/// # Examples
-/// Value<serde_json::Value>
-/// ```
-/// use arel::prelude::*;
-/// let json: serde_json::Value = serde_json::from_str(r#"{"hello":"world"}"#).unwrap();
-/// let v: arel::Value<serde_json::Value> = json.clone().into();
-/// assert_eq!(v, arel::Value::Json(json));
-///```
+
 #[cfg(feature = "with-json")]
-impl From<serde_json::Value> for Value<serde_json::Value> {
-    fn from(val: serde_json::Value) -> Self {
+impl From<sub_value::ValueJson> for Value {
+    fn from(val: sub_value::ValueJson) -> Self {
         Value::Json(val)
     }
 }
-/// # Examples
-/// Value<chrono::DateTime<chrono::FixedOffset>>
-/// ```
-/// use arel::prelude::*;
-/// use chrono::{TimeZone};
-/// let utc_time = chrono::Utc.with_ymd_and_hms(2023, 12, 31, 0, 0, 0).unwrap();
-/// let fixed_time = utc_time.clone().into();
-/// let v: arel::Value<chrono::DateTime<chrono::FixedOffset>> = utc_time.into();
-/// assert_eq!(v, arel::Value::ChronoTimestamp(fixed_time));
-///```
+
 #[cfg(feature = "with-chrono")]
-impl From<chrono::DateTime<chrono::Utc>> for Value<chrono::DateTime<chrono::FixedOffset>> {
-    fn from(val: chrono::DateTime<chrono::Utc>) -> Self {
-        let value = chrono::DateTime::<chrono::FixedOffset>::from(val);
-        Value::ChronoTimestamp(value)
-    }
-}
-/// # Examples
-/// Value<chrono::DateTime<chrono::FixedOffset>>
-/// ```
-/// use arel::prelude::*;
-/// use chrono::{TimeZone};
-/// let utc_time = chrono::Utc.with_ymd_and_hms(2023, 12, 31, 0, 0, 0).unwrap();
-/// let fixed_time: chrono::DateTime<chrono::FixedOffset> = utc_time.clone().into();
-/// let v: arel::Value<chrono::DateTime<chrono::FixedOffset>> = fixed_time.clone().into();
-/// assert_eq!(v, arel::Value::ChronoTimestamp(fixed_time));
-///```
-#[cfg(feature = "with-chrono")]
-impl From<chrono::DateTime<chrono::FixedOffset>> for Value<chrono::DateTime<chrono::FixedOffset>> {
-    fn from(val: chrono::DateTime<chrono::FixedOffset>) -> Self {
+impl From<sub_value::ValueChronoTimestamp> for Value {
+    fn from(val: sub_value::ValueChronoTimestamp) -> Self {
         Value::ChronoTimestamp(val)
     }
 }
-/// # Examples
-/// Value<chrono::NaiveDateTime>
-/// ```
-/// use arel::prelude::*;
-/// use chrono::{TimeZone};
-/// let utc_time = chrono::Utc.with_ymd_and_hms(2023, 12, 31, 0, 0, 0).unwrap();
-/// let v: arel::Value<chrono::NaiveDateTime> = utc_time.clone().into();
-/// assert_eq!(v, arel::Value::ChronoDateTime(utc_time.naive_local()));
-///```
+
 #[cfg(feature = "with-chrono")]
-impl From<chrono::DateTime<chrono::Utc>> for Value<chrono::NaiveDateTime> {
-    fn from(val: chrono::DateTime<chrono::Utc>) -> Self {
-        let value = val.naive_local();
-        Value::ChronoDateTime(value)
+impl From<sub_value::ValueChronoDateTime> for Value {
+    fn from(val: sub_value::ValueChronoDateTime) -> Self {
+        Value::ChronoDateTime(val)
     }
 }
-/// # Examples
-/// Value<chrono::NaiveDateTime>
-/// ```
-/// use arel::prelude::*;
-/// use chrono::{TimeZone};
-/// let utc_time = chrono::Utc.with_ymd_and_hms(2023, 12, 31, 0, 0, 0).unwrap();
-/// let fixed_time: chrono::DateTime<chrono::FixedOffset> = utc_time.clone().into();
-/// let v: arel::Value<chrono::NaiveDateTime> = fixed_time.clone().into();
-/// assert_eq!(v, arel::Value::ChronoDateTime(utc_time.naive_local()));
-///```
+
 #[cfg(feature = "with-chrono")]
-impl From<chrono::DateTime<chrono::FixedOffset>> for Value<chrono::NaiveDateTime> {
-    fn from(val: chrono::DateTime<chrono::FixedOffset>) -> Self {
-        let value = val.naive_local();
-        Value::ChronoDateTime(value)
+impl From<sub_value::ValueChronoDate> for Value {
+    fn from(val: sub_value::ValueChronoDate) -> Self {
+        Value::ChronoDate(val)
     }
 }
-/// # Examples
-/// Value<chrono::NaiveDate>
-/// ```
-/// use arel::prelude::*;
-/// use chrono::{TimeZone};
-/// let utc_time = chrono::Utc.with_ymd_and_hms(2023, 12, 31, 0, 0, 0).unwrap();
-/// let v: arel::Value<chrono::NaiveDate> = utc_time.clone().into();
-/// assert_eq!(v, arel::Value::ChronoDate(utc_time.date_naive()));
-///```
+
 #[cfg(feature = "with-chrono")]
-impl From<chrono::DateTime<chrono::Utc>> for Value<chrono::NaiveDate> {
-    fn from(val: chrono::DateTime<chrono::Utc>) -> Self {
-        let value = val.date_naive();
-        Value::ChronoDate(value)
+impl From<sub_value::ValueChronoTime> for Value {
+    fn from(val: sub_value::ValueChronoTime) -> Self {
+        Value::ChronoTime(val)
     }
 }
-/// # Examples
-/// Value<chrono::NaiveTime>
-/// ```
-/// use arel::prelude::*;
-/// use chrono::{TimeZone};
-/// let utc_time = chrono::Utc.with_ymd_and_hms(2023, 12, 31, 0, 0, 0).unwrap();
-/// let fixed_time: chrono::DateTime<chrono::FixedOffset> = utc_time.clone().into();
-/// let v: arel::Value<chrono::NaiveDate> = fixed_time.clone().into();
-/// assert_eq!(v, arel::Value::ChronoDate(utc_time.date_naive()));
-///```
-#[cfg(feature = "with-chrono")]
-impl From<chrono::DateTime<chrono::FixedOffset>> for Value<chrono::NaiveDate> {
-    fn from(val: chrono::DateTime<chrono::FixedOffset>) -> Self {
-        let value = val.date_naive();
-        Value::ChronoDate(value)
-    }
-}
-/// # Examples
-/// Value<chrono::NaiveTime>
-/// ```
-/// use arel::prelude::*;
-/// use chrono::{TimeZone};
-/// let utc_time = chrono::Utc.with_ymd_and_hms(2023, 12, 31, 0, 0, 0).unwrap();
-/// let v: arel::Value<chrono::NaiveTime> = utc_time.clone().into();
-/// assert_eq!(v, arel::Value::ChronoTime(utc_time.time()));
-///```
-#[cfg(feature = "with-chrono")]
-impl From<chrono::DateTime<chrono::Utc>> for Value<chrono::NaiveTime> {
-    fn from(val: chrono::DateTime<chrono::Utc>) -> Self {
-        let value = val.time();
-        Value::ChronoTime(value)
-    }
-}
-/// # Examples
-/// Value<chrono::NaiveDate>
-/// ```
-/// use arel::prelude::*;
-/// use chrono::{TimeZone};
-/// let utc_time = chrono::Utc.with_ymd_and_hms(2023, 12, 31, 0, 0, 0).unwrap();
-/// let fixed_time: chrono::DateTime<chrono::FixedOffset> = utc_time.clone().into();
-/// let v: arel::Value<chrono::NaiveTime> = fixed_time.clone().into();
-/// assert_eq!(v, arel::Value::ChronoTime(utc_time.time()));
-///```
-#[cfg(feature = "with-chrono")]
-impl From<chrono::DateTime<chrono::FixedOffset>> for Value<chrono::NaiveTime> {
-    fn from(val: chrono::DateTime<chrono::FixedOffset>) -> Self {
-        let value = val.time();
-        Value::ChronoTime(value)
-    }
-}
-/// # Examples
-/// Value<T>
-/// ```
-/// use arel::prelude::*;
-/// let v: arel::Value<i32> = (&1).into();
-/// assert_eq!(v, arel::Value::Int(1));
-///
-/// let v: arel::Value<String> = (&"abc".to_string()).into();
-/// assert_eq!(v, arel::Value::String("abc".to_string()));
-///
-/// let v: arel::Value<Vec<i32>> = (&vec![1,2,3]).into();
-/// assert_eq!(v, arel::Value::Array(vec![1,2,3]));
-///```
-impl<T> From<&T> for Value<T>
+
+impl<T> From<&T> for Value
 where
-    T: Clone + Into<Value<T>>,
+    T: Clone + Into<Value>,
 {
     fn from(value: &T) -> Self {
         value.clone().into()
-    }
-}
-/// # Examples
-/// Value<T>
-/// ```
-/// use arel::prelude::*;
-/// let v: arel::Value<i32> = Some(1).into();
-/// assert_eq!(v, arel::Value::Int(1));
-///
-/// let v: arel::Value<String> = Some("abc".to_string()).into();
-/// assert_eq!(v, arel::Value::String("abc".to_string()));
-///
-/// let v: arel::Value<Vec<i32>> = Some(vec![1,2,3]).into();
-/// assert_eq!(v, arel::Value::Array(vec![1,2,3]));
-///```
-impl<U, T> From<Option<T>> for Value<U>
-where
-    T: Into<Value<U>>,
-{
-    fn from(value: Option<T>) -> Self {
-        match value {
-            Some(value) => value.into(),
-            None => Self::Null,
-        }
     }
 }
