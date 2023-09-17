@@ -22,6 +22,7 @@ pub use sqlx;
 
 pub use bytes::Bytes;
 pub use error::Error;
+pub use sql::Sql;
 pub use value::{sub_value, Value};
 
 pub use traits::{arel_attribute_from_row::ArelAttributeFromRow, Arel, SuperArel};

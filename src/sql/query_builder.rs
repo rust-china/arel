@@ -16,11 +16,27 @@ impl<'a> DerefMut for QueryBuilder<'a> {
     }
 }
 
+impl<'a> TryFrom<&super::Sql> for QueryBuilder<'a> {
+    type Error = crate::Error;
+    fn try_from(sql: &super::Sql) -> Result<Self, Self::Error> {
+        let mut query_builder = QueryBuilder::default();
+        let mut handle_start_index = 0;
+        for (idx, replace_index) in sql.bind_indexs.iter().enumerate() {
+            let replace_index = *replace_index;
+            let idx_value = &sql.bind_values[idx];
+            query_builder.push(&sql.raw_value[handle_start_index..replace_index]);
+            query_builder.push_bind_arel_value(idx_value)?;
+            handle_start_index = replace_index + 1;
+        }
+        if handle_start_index < sql.raw_value.len() {
+            query_builder.push(&sql.raw_value[handle_start_index..]);
+        }
+        Ok(query_builder)
+    }
+}
+
 impl<'a> QueryBuilder<'a> {
-    pub fn push_bind_arel_value<T>(&mut self, value: &crate::Value) -> crate::Result<&mut Self>
-    where
-        T: for<'r> sqlx::Decode<'r, crate::db::Database> + sqlx::Encode<'a, crate::db::Database> + sqlx::Type<crate::db::Database> + Send + 'a,
-    {
+    pub fn push_bind_arel_value(&mut self, value: &crate::Value) -> crate::Result<&mut Self> {
         match value {
             crate::Value::Bool(val) => {
                 self.push_bind(val.0);
@@ -62,8 +78,9 @@ impl<'a> QueryBuilder<'a> {
             crate::Value::String(val) => {
                 self.push_bind(val.0.clone());
             }
-            crate::Value::Bytes(_) => {
-                return Err(anyhow::anyhow!("Value::Bytes type not allow to bind value.").into());
+            crate::Value::Bytes(val) => {
+                let bytes: Option<Vec<u8>> = val.as_ref().map(|v| v.clone().into());
+                self.push_bind(bytes);
             }
             crate::Value::Array(_) => {
                 return Err(anyhow::anyhow!("Value::Array type not allow to bind value.").into());
