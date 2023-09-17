@@ -5,7 +5,7 @@ use std::cmp::PartialEq;
 use std::ops::{Deref, DerefMut};
 
 // #[allow(clippy::box_collection)]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct ValueBytes(pub Option<bytes::Bytes>);
 
 impl Deref for ValueBytes {

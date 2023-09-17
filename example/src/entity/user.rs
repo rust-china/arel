@@ -28,6 +28,16 @@ impl ArelAttributeFromRow for Gender {
     }
 }
 
+impl From<Gender> for arel::Value {
+    fn from(value: Gender) -> Self {
+        match value {
+            Gender::Unknown => 0.into(),
+            Gender::Male => 1.into(),
+            Gender::Female => 2.into(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     User,
@@ -51,6 +61,14 @@ impl ArelAttributeFromRow for Type {
             v @ _ => return Err(sqlx::Error::Decode(format!("{}: {} can not decode", std::any::type_name::<Self>(), v).into())),
         };
         Ok(ret)
+    }
+}
+impl From<Type> for arel::Value {
+    fn from(value: Type) -> Self {
+        match value {
+            Type::Admin => "ADMIN".into(),
+            Type::User => "USER".into(),
+        }
     }
 }
 

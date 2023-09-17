@@ -5,7 +5,7 @@ use std::cmp::PartialEq;
 use std::ops::{Deref, DerefMut};
 
 #[cfg(feature = "with-chrono")]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct ValueChronoDate(pub Option<chrono::NaiveDate>);
 
 impl Deref for ValueChronoDate {

@@ -15,6 +15,7 @@ pub trait SuperArel {
     fn _primary_keys() -> Vec<&'static str> {
         vec!["id"]
     }
+    fn _primary_values(&self) -> Vec<crate::Value>;
     fn _pool() -> crate::Result<&'static sqlx::Pool<crate::db::Database>> {
         Ok(crate::db::get_pool()?)
     }
@@ -27,6 +28,9 @@ pub trait Arel: SuperArel {
     }
     fn primary_keys() -> Vec<&'static str> {
         Self::_primary_keys()
+    }
+    fn primary_values(&self) -> Vec<crate::Value> {
+        self._primary_values()
     }
     fn pool() -> crate::Result<&'static sqlx::Pool<crate::db::Database>> {
         Self::_pool()

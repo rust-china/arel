@@ -40,6 +40,7 @@ fn do_expand(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> 
 
     let arel_trait_impl_table_name = arel_trait::impl_table_name(input)?;
     let arel_trait_impl_primary_keys = arel_trait::impl_primary_keys(input)?;
+    let arel_trait_impl_primary_values = arel_trait::impl_primary_values(input)?;
     let impl_trait_sqlx_from_row = impl_trait_sqlx_from_row(input)?;
 
     let generics = input.generics()?;
@@ -57,6 +58,8 @@ fn do_expand(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> 
             #arel_trait_impl_table_name
             // fn _primary_keys() -> Vec<&'static str>;
             #arel_trait_impl_primary_keys
+            // fn _primary_values(&self) -> Vec<arel::Value>;
+            #arel_trait_impl_primary_values
 
         }
 

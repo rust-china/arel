@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::cmp::PartialEq;
 use std::ops::{Deref, DerefMut};
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct ValueSmallInt(pub Option<i16>);
 
 impl Deref for ValueSmallInt {
