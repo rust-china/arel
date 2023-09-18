@@ -1,20 +1,21 @@
-// fn _table_name() -> &'static str;
+// fn _table_name() -> String;
 pub(crate) fn impl_table_name(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
     let mut ret_token_stream = proc_macro2::TokenStream::new();
     if let Some((table_name, _)) = input.get_args_path_value(vec![], "table_name", None)? {
         ret_token_stream.extend(quote::quote!(
-            fn _table_name() -> &'static str {
-                #table_name
+            fn _table_name() -> String {
+                #table_name.into()
             }
         ));
     }
-    if ret_token_stream.is_empty() {
-        Err(syn::Error::new_spanned(&input.input, r#"Please set arel(table_name = "xxx")"#))
-    } else {
-        Ok(ret_token_stream)
-    }
+    // if ret_token_stream.is_empty() {
+    //     Err(syn::Error::new_spanned(&input.input, r#"Please set arel(table_name = "xxx")"#))
+    // } else {
+    //     Ok(ret_token_stream)
+    // }
+    Ok(ret_token_stream)
 }
-// fn _primary_keys() -> Vec<&'static str>;
+// fn primary_keys() -> Vec<&'static str>;
 pub(crate) fn impl_primary_keys(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
     let fields = input.struct_fields()?;
     let mut primary_keys: Vec<String> = vec![];
@@ -33,7 +34,7 @@ pub(crate) fn impl_primary_keys(input: &crate::ItemInput) -> syn::Result<proc_ma
     let mut ret_token_stream = proc_macro2::TokenStream::new();
     if primary_keys.len() > 0 {
         ret_token_stream.extend(quote::quote!(
-            fn _primary_keys() -> Vec<&'static str> {
+            fn primary_keys() -> Vec<&'static str> {
                 vec![#(#primary_keys),*]
             }
         ))
@@ -42,7 +43,7 @@ pub(crate) fn impl_primary_keys(input: &crate::ItemInput) -> syn::Result<proc_ma
     Ok(ret_token_stream)
 }
 
-// fn _primary_values(&self) -> Vec<arel::Value>;
+// fn primary_values(&self) -> Vec<arel::Value>;
 pub(crate) fn impl_primary_values(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
     let mut sub_clauses = vec![];
 
@@ -60,14 +61,14 @@ pub(crate) fn impl_primary_values(input: &crate::ItemInput) -> syn::Result<proc_
             }
         };
         sub_clauses.push(quote::quote!(
-            if Self::_primary_keys().contains(&#field_name) {
+            if Self::primary_keys().contains(&#field_name) {
                 primary_values.push(self.#ident.clone().into());
             }
         ));
     }
 
     Ok(quote::quote!(
-        fn _primary_values(&self) -> Vec<arel::Value> {
+        fn primary_values(&self) -> Vec<arel::Value> {
             let mut primary_values = vec![];
             #(#sub_clauses)*
             primary_values

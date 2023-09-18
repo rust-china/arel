@@ -358,7 +358,11 @@ where
     fn from(value: Option<T>) -> Self {
         match value {
             Some(v) => v.into(),
-            None => T::default().into(),
+            None => {
+                let mut value: Value = T::default().into();
+                value.set_null();
+                value
+            }
         }
     }
 }
@@ -381,9 +385,9 @@ mod tests {
         assert_eq!(value, Value::Int(sub_value::ValueInt(Some(1))));
 
         let value: Value = Option::<i32>::None.into();
-        assert_eq!(value, Value::Int(sub_value::ValueInt(Some(0))));
+        assert_eq!(value, Value::Int(sub_value::ValueInt(None)));
         let value: Value = (&Option::<i32>::None).into();
-        assert_eq!(value, Value::Int(sub_value::ValueInt(Some(0))));
+        assert_eq!(value, Value::Int(sub_value::ValueInt(None)));
 
         let v1: sub_value::ValueInt = 1.into();
         let value: Value = v1.clone().into();

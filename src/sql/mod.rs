@@ -3,7 +3,7 @@ mod query_builder;
 use query_builder::QueryBuilder;
 use std::ops::{Bound, RangeBounds};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Sql {
     pub raw_value: String,
     pub bind_indexs: Vec<usize>,
@@ -17,6 +17,19 @@ impl Default for Sql {
             bind_indexs: vec![],
             bind_values: vec![],
         }
+    }
+}
+
+impl TryFrom<Sql> for String {
+    type Error = crate::Error;
+    fn try_from(sql: Sql) -> Result<Self, Self::Error> {
+        sql.to_sql_string()
+    }
+}
+
+impl<T: ToString> From<T> for Sql {
+    fn from(value: T) -> Self {
+        Self::new(value)
     }
 }
 
@@ -38,6 +51,16 @@ impl Sql {
         self.bind_values.push(bind_value.into());
         self
     }
+    pub fn push_binds<V: Into<crate::Value>>(&mut self, bind_values: Vec<V>, separated_str: &str) -> &mut Self {
+        let len = bind_values.len();
+        for (idx, bind_value) in bind_values.into_iter().enumerate() {
+            self.push_bind(bind_value);
+            if idx < len - 1 {
+                self.push_str(separated_str);
+            }
+        }
+        self
+    }
     pub fn push_str_with_bind<T: AsRef<str>, V: Into<crate::Value>>(&mut self, raw_str: T, bind_value: V) -> &mut Self {
         self.push_str(raw_str);
         self.push_bind(bind_value);
@@ -50,7 +73,17 @@ impl Sql {
         self.bind_values.extend(sql.bind_values);
         self
     }
-    pub fn to_debug_sql_string(&self) -> crate::Result<String> {
+    pub fn push_sqls(&mut self, sqls: Vec<Sql>, separated_str: &str) -> &mut Self {
+        let len = sqls.len();
+        for (idx, sql) in sqls.into_iter().enumerate() {
+            self.push_sql(sql);
+            if idx < len - 1 {
+                self.push_str(separated_str);
+            }
+        }
+        self
+    }
+    pub fn to_sql_string(&self) -> crate::Result<String> {
         let query_builder: QueryBuilder = self.try_into()?;
         Ok(query_builder.sql().to_string())
     }
@@ -61,22 +94,22 @@ impl Sql {
     ///
     /// ```
     /// let sql = arel::Sql::range_sql("age", ..18).unwrap();
-    /// assert_eq!(sql.to_debug_sql_string().unwrap(), r#"age < 18"#);
+    /// assert_eq!(sql.to_sql_string().unwrap(), r#"age < 18"#);
     ///
     /// let sql = arel::Sql::range_sql("age", ..=18).unwrap();
-    /// assert_eq!(sql.to_debug_sql_string().unwrap(), r#"age <= 18"#);
+    /// assert_eq!(sql.to_sql_string().unwrap(), r#"age <= 18"#);
     ///
     /// let sql = arel::Sql::range_sql("age", 18..20).unwrap();
-    /// assert_eq!(sql.to_debug_sql_string().unwrap(), r#"age >= 18 AND age < 20"#);
+    /// assert_eq!(sql.to_sql_string().unwrap(), r#"age >= 18 AND age < 20"#);
     ///
     /// let sql = arel::Sql::range_sql("age", 18..=20).unwrap();
-    /// assert_eq!(sql.to_debug_sql_string().unwrap(), r#"age BETWEEN 18 AND 20"#);
+    /// assert_eq!(sql.to_sql_string().unwrap(), r#"age BETWEEN 18 AND 20"#);
     ///
     /// let sql = arel::Sql::range_sql("age", (std::ops::Bound::Excluded(18), std::ops::Bound::Included(20))).unwrap();
-    /// assert_eq!(sql.to_debug_sql_string().unwrap(), r#"age > 18 AND age <= 20"#);
+    /// assert_eq!(sql.to_sql_string().unwrap(), r#"age > 18 AND age <= 20"#);
     ///
     /// let sql = arel::Sql::range_sql("age", 18..).unwrap();
-    /// assert_eq!(sql.to_debug_sql_string().unwrap(), r#"age >= 18"#);
+    /// assert_eq!(sql.to_sql_string().unwrap(), r#"age >= 18"#);
     ///
     /// ```
     pub fn range_sql<K: AsRef<str>, V: ToString, R: RangeBounds<V>>(key: K, range: R) -> Option<Sql> {
@@ -106,6 +139,8 @@ impl Sql {
     }
 }
 
+impl Sql {}
+
 #[cfg(test)]
 mod tests {
     use crate::sub_value::{ValueInt, ValueString};
@@ -125,8 +160,8 @@ mod tests {
         sql3.push_sql(sql1).push_sql(sql2);
 
         #[cfg(any(feature = "sqlite", feature = "mysql"))]
-        assert_eq!(sql3.to_debug_sql_string().unwrap(), r#"select * from users where users.id = ? and name = ?"#.to_owned());
+        assert_eq!(sql3.to_sql_string().unwrap(), r#"select * from users where users.id = ? and name = ?"#.to_owned());
         #[cfg(any(feature = "postgres"))]
-        assert_eq!(sql3.to_debug_sql_string().unwrap(), r#"select * from users where users.id = $1 and name = $2"#.to_owned());
+        assert_eq!(sql3.to_sql_string().unwrap(), r#"select * from users where users.id = $1 and name = $2"#.to_owned());
     }
 }

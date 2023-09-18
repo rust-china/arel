@@ -54,11 +54,11 @@ fn do_expand(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> 
         }
 
         impl #impl_generics arel::SuperArel for #model_name_ident #type_generics #where_clause {
-            // fn _table_name() -> &'static str;
+            // fn _table_name() -> String;
             #arel_trait_impl_table_name
-            // fn _primary_keys() -> Vec<&'static str>;
+            // fn primary_keys() -> Vec<&'static str>;
             #arel_trait_impl_primary_keys
-            // fn _primary_values(&self) -> Vec<arel::Value>;
+            // fn primary_values(&self) -> Vec<arel::Value>;
             #arel_trait_impl_primary_values
 
         }
