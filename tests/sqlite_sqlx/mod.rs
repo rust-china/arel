@@ -81,6 +81,7 @@ pub struct User {
     r#type: Type,
     address: Option<String>,
     expired_at: Option<chrono::DateTime<chrono::FixedOffset>>,
+    created_at: chrono::DateTime<chrono::FixedOffset>,
 }
 impl Arel for User {}
 
@@ -105,11 +106,12 @@ pub async fn init_db() -> arel::Result<()> {
 					(
 							id             INTEGER PRIMARY KEY NOT NULL,
 							name           VARCHAR(255) NOT NULL,
-							age   				 INT(11),
+							age   		   INT(11),
 							gender         INT(1),
 							type           VARCHAR(255) NOT NULL default 'ADMIN',
 							address        VARCHAR(255),
-							expired_at     DATETIME
+							expired_at     DATETIME,
+                            created_at     DATETIME DEFAULT CURRENT_TIMESTAMP
 					);",
     )
     .execute(visitor.pool())
@@ -130,6 +132,8 @@ pub async fn init_db() -> arel::Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use anyhow::Ok;
+
     use super::*;
 
     #[tokio::test]
@@ -137,6 +141,9 @@ mod tests {
         init_db().await?;
 
         test_query().await?;
+        test_insert().await?;
+        test_update().await?;
+        test_destroy().await?;
 
         Ok(())
     }
@@ -145,6 +152,39 @@ mod tests {
         assert_eq!(first_user.id, 1);
         assert_eq!(first_user.gender, Some(Gender::Unknown));
         assert_eq!(first_user.r#type, Type::Admin);
+
+        Ok(())
+    }
+    async fn test_insert() -> anyhow::Result<()> {
+        let mut arel_new_user = ArelUser {
+            name: Set("hello"),
+            gender: Set(Gender::Male),
+            ..Default::default()
+        };
+        assert!(!arel_new_user.persited());
+        arel_new_user.save().await?;
+        assert!(arel_new_user.persited());
+        assert_eq!(arel_new_user.name.value().unwrap(), "hello");
+        assert!(arel_new_user.id.value().is_some());
+        Ok(())
+    }
+    async fn test_update() -> anyhow::Result<()> {
+        let user: User = User::query().order_desc("id").fetch_one_as().await?;
+        let mut arel_user: ArelUser = user.into();
+        let old_name = arel_user.name.clone();
+        arel_user.name.set("hello2");
+        assert_eq!(arel_user.name, arel::ActiveValue::Changed("hello2".into(), Box::new(old_name)));
+        arel_user.save().await?;
+        assert_eq!(arel_user.name, arel::ActiveValue::Unchanged("hello2".into()));
+        Ok(())
+    }
+
+    async fn test_destroy() -> anyhow::Result<()> {
+        let user: User = User::query().order_desc("id").fetch_one_as().await?;
+        let mut arel_user: ArelUser = user.into();
+        let old_id = arel_user.id.clone();
+        arel_user.destroy().await?;
+        assert_eq!(arel_user.id, arel::ActiveValue::Changed(old_id.value().unwrap().clone(), Box::new(arel::ActiveValue::NotSet)));
 
         Ok(())
     }

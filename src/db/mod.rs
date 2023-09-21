@@ -7,9 +7,9 @@ pub type DatabasePool = sqlx::sqlite::SqlitePool;
 #[cfg(feature = "sqlite")]
 pub type DatabaseRow = sqlx::sqlite::SqliteRow;
 #[cfg(feature = "sqlite")]
-pub type DatabaseQueryResult = sqlx::sqlite::SqliteQueryResult;
-#[cfg(feature = "sqlite")]
 pub type DatabasePoolOptions = sqlx::sqlite::SqlitePoolOptions;
+#[cfg(feature = "sqlite")]
+pub type DatabaseQueryResult = sqlx::sqlite::SqliteQueryResult;
 
 #[cfg(feature = "mysql")]
 pub type Database = sqlx::mysql::MySql;
@@ -20,9 +20,9 @@ pub type DatabasePool = sqlx::mysql::MySqlPool;
 #[cfg(feature = "mysql")]
 pub type DatabaseRow = sqlx::mysql::MySqlRow;
 #[cfg(feature = "mysql")]
-pub type DatabaseQueryResult = sqlx::mysql::MySqlQueryResult;
-#[cfg(feature = "mysql")]
 pub type DatabasePoolOptions = sqlx::mysql::MySqlPoolOptions;
+#[cfg(feature = "mysql")]
+pub type DatabaseQueryResult = sqlx::mysql::MySqlQueryResult;
 
 #[cfg(feature = "postgres")]
 pub type Database = sqlx::Postgres;
@@ -33,12 +33,12 @@ pub type DatabasePool = sqlx::PgPool;
 #[cfg(feature = "postgres")]
 pub type DatabaseRow = sqlx::postgres::PgRow;
 #[cfg(feature = "postgres")]
-pub type DatabaseQueryResult = sqlx::postgres::PgQueryResult;
-#[cfg(feature = "postgres")]
 pub type DatabasePoolOptions = sqlx::postgres::PgPoolOptions;
+#[cfg(feature = "postgres")]
+pub type DatabaseQueryResult = sqlx::postgres::PgQueryResult;
 
 pub mod visitor;
 
 pub fn get_pool() -> crate::Result<&'static sqlx::Pool<Database>> {
-	Ok(visitor::get()?.pool())
+    Ok(visitor::get()?.pool())
 }

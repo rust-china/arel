@@ -1,3 +1,4 @@
+mod eq;
 mod from;
 
 use serde::{Deserialize, Serialize};

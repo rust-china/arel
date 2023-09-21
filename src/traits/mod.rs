@@ -1,4 +1,6 @@
 pub mod arel_attribute_from_row;
+pub mod arel_model;
+pub mod arel_persisted;
 
 use std::future::Future;
 use std::pin::Pin;
@@ -16,19 +18,21 @@ pub trait SuperArel {
     fn primary_keys() -> Vec<&'static str> {
         vec!["id"]
     }
-    fn primary_values(&self) -> Vec<crate::Value>;
     fn _pool() -> crate::Result<&'static sqlx::Pool<crate::db::Database>> {
         Ok(crate::db::get_pool()?)
     }
 }
 
 #[async_trait::async_trait]
-pub trait Arel: SuperArel {
+pub trait Arel: SuperArel + Sized {
     fn table_name() -> String {
         Self::_table_name()
     }
     fn pool() -> crate::Result<&'static sqlx::Pool<crate::db::Database>> {
         Self::_pool()
+    }
+    fn query() -> crate::manager::SelectManager<Self> {
+        crate::manager::SelectManager::<Self>::default()
     }
     async fn with_transaction<'a, F: Send>(callback: F) -> crate::Result<Option<Self>>
     where

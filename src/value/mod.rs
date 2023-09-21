@@ -2,6 +2,7 @@ mod eq;
 mod from;
 mod ops;
 
+pub mod active_vulue;
 pub mod sub_value;
 
 use serde::{Deserialize, Serialize};

@@ -1,3 +1,4 @@
+mod arel_model_trait;
 mod arel_trait;
 
 use proc_macro::TokenStream;
@@ -25,12 +26,24 @@ pub fn create_arel(args: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 fn do_expand(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
+    let arel_trail = do_expand_arel(input)?;
+    let sqlx_from_row = do_expand_sqlx_from_row(input)?;
+    let arel_model_trait = do_expand_arel_model(input)?;
+
+    Ok(quote::quote!(
+        #arel_trail
+        #sqlx_from_row
+        #arel_model_trait
+    ))
+}
+
+fn do_expand_arel(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
     match &input.input {
         syn::Item::Struct(_) => (),
         _ => return Err(syn::Error::new_spanned(&input.input, "arel only allow use on struct type")),
     }
 
-    let model_name_ident = input.ident()?;
+    let struct_ident = input.ident()?;
     let mut model_fields = vec![];
     for field in input.struct_fields()?.iter() {
         let mut new_field = field.clone();
@@ -40,8 +53,6 @@ fn do_expand(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> 
 
     let arel_trait_impl_table_name = arel_trait::impl_table_name(input)?;
     let arel_trait_impl_primary_keys = arel_trait::impl_primary_keys(input)?;
-    let arel_trait_impl_primary_values = arel_trait::impl_primary_values(input)?;
-    let impl_trait_sqlx_from_row = impl_trait_sqlx_from_row(input)?;
 
     let generics = input.generics()?;
     let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
@@ -49,21 +60,26 @@ fn do_expand(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> 
     let vis = input.vis()?;
     Ok(quote::quote!(
         #[derive(Clone, Debug, Default, PartialEq)]
-        #vis struct #model_name_ident #generics {
+        #vis struct #struct_ident #generics {
+            pub __persisted__: bool,
             #(#model_fields),*
         }
 
-        impl #impl_generics arel::SuperArel for #model_name_ident #type_generics #where_clause {
+        impl #impl_generics arel::SuperArel for #struct_ident #type_generics #where_clause {
             // fn _table_name() -> String;
             #arel_trait_impl_table_name
             // fn primary_keys() -> Vec<&'static str>;
             #arel_trait_impl_primary_keys
-            // fn primary_values(&self) -> Vec<arel::Value>;
-            #arel_trait_impl_primary_values
-
         }
 
-        #impl_trait_sqlx_from_row
+        impl #impl_generics arel::ArelPersisted for #struct_ident #type_generics #where_clause {
+            fn set_persisted(&mut self, persisted: bool) {
+                self.__persisted__ = persisted;
+            }
+            fn persited(&self) -> bool {
+                self.__persisted__
+            }
+        }
     ))
 }
 
@@ -80,7 +96,7 @@ fn do_expand(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> 
 //         Ok(model)
 //     }
 // }
-fn impl_trait_sqlx_from_row(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
+fn do_expand_sqlx_from_row(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
     let struct_ident = input.ident()?;
     let fields = input.struct_fields()?;
 
@@ -120,5 +136,79 @@ fn impl_trait_sqlx_from_row(input: &crate::ItemInput) -> syn::Result<proc_macro2
                 Ok(model)
             }
         }
+    ))
+}
+
+fn do_expand_arel_model(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
+    match &input.input {
+        syn::Item::Struct(_) => (),
+        _ => return Err(syn::Error::new_spanned(&input.input, "arel only allow use on struct type")),
+    }
+
+    let struct_ident = input.ident()?;
+    let arel_model_ident = syn::Ident::new(&format!("Arel{}", struct_ident.to_string()), struct_ident.span());
+
+    let mut model_fields = vec![];
+    for field in input.struct_fields()?.iter() {
+        let mut new_field = field.clone();
+        new_field.attrs = vec![];
+
+        if let Some(new_type) = arel_model_trait::new_field_type(&field) {
+            new_field.ty = syn::parse_quote! { #new_type };
+        } else {
+            let old_ty = &field.ty;
+            new_field.ty = syn::parse_quote! { arel::ActiveValue<#old_ty> };
+        }
+        model_fields.push(new_field);
+    }
+
+    let arel_model_trait_impl_primary_values = arel_model_trait::impl_primary_values(input)?;
+    let arel_model_trait_impl_insert_exec = arel_model_trait::impl_insert_exec(input)?;
+    let arel_model_trait_impl_update_exec = arel_model_trait::impl_update_exec(input)?;
+    let arel_model_trait_from_model = arel_model_trait::impl_from_model(input)?;
+    let arel_model_trait_impl_destroy_exec = arel_model_trait::impl_destroy_exec(input)?;
+
+    let generics = input.generics()?;
+    let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
+
+    let vis = input.vis()?;
+    Ok(quote::quote!(
+        #[derive(Clone, Debug, PartialEq, Default)]
+        #vis struct #arel_model_ident #generics {
+            pub __persisted__: bool,
+            #(#model_fields),*
+        }
+
+        #[arel::async_trait::async_trait]
+        impl #impl_generics arel::ArelModel for #arel_model_ident #type_generics #where_clause {
+            type Model = #struct_ident #type_generics;
+            // fn primary_values(&self) -> Vec<arel::Value>;
+            #arel_model_trait_impl_primary_values
+            // async fn insert_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: sqlx::Executor<'a, Database = arel::db::Database>;
+            #arel_model_trait_impl_insert_exec
+            // async fn update_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: sqlx::Executor<'a, Database = arel::db::Database>;
+            #arel_model_trait_impl_update_exec
+            // async fn save(&mut self) -> arel::Result<()>;
+            async fn save(&mut self) -> arel::Result<()> {
+                self.save_exec(Self::Model::pool()?).await
+            }
+            // async fn destroy_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: sqlx::Executor<'a, Database = arel::db::Database>;
+            #arel_model_trait_impl_destroy_exec
+            // async fn destroy(&mut self) -> arel::Result<()>;
+            async fn destroy(&mut self) -> arel::Result<()> {
+                self.destroy_exec(Self::Model::pool()?).await
+            }
+        }
+
+        impl #impl_generics arel::ArelPersisted for #arel_model_ident #type_generics #where_clause {
+            fn set_persisted(&mut self, persisted: bool) {
+                self.__persisted__ = persisted;
+            }
+            fn persited(&self) -> bool {
+                self.__persisted__
+            }
+        }
+
+        #arel_model_trait_from_model
     ))
 }

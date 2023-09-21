@@ -16,6 +16,13 @@ impl<'a> DerefMut for QueryBuilder<'a> {
     }
 }
 
+impl<'a> TryFrom<super::Sql> for QueryBuilder<'a> {
+    type Error = crate::Error;
+    fn try_from(sql: super::Sql) -> Result<Self, Self::Error> {
+        (&sql).try_into()
+    }
+}
+
 impl<'a> TryFrom<&super::Sql> for QueryBuilder<'a> {
     type Error = crate::Error;
     fn try_from(sql: &super::Sql) -> Result<Self, Self::Error> {

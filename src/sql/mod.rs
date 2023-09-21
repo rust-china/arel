@@ -1,7 +1,7 @@
 mod query_builder;
 
-use query_builder::QueryBuilder;
-use std::ops::{Bound, RangeBounds};
+pub use query_builder::QueryBuilder;
+use std::ops::{Bound, DerefMut, RangeBounds};
 
 #[derive(Debug, Clone)]
 pub struct Sql {
@@ -43,6 +43,16 @@ impl Sql {
     }
     pub fn push_str<T: AsRef<str>>(&mut self, raw_str: T) -> &mut Self {
         self.raw_value.push_str(raw_str.as_ref());
+        self
+    }
+    pub fn push_strs<T: AsRef<str>>(&mut self, raw_strs: Vec<T>, separated_str: &str) -> &mut Self {
+        let len = raw_strs.len();
+        for (idx, raw_str) in raw_strs.into_iter().enumerate() {
+            self.push_str(raw_str);
+            if idx < len - 1 {
+                self.push_str(separated_str);
+            }
+        }
         self
     }
     pub fn push_bind<V: Into<crate::Value>>(&mut self, bind_value: V) -> &mut Self {
@@ -139,7 +149,66 @@ impl Sql {
     }
 }
 
-impl Sql {}
+impl Sql {
+    #[allow(dead_code)]
+    pub async fn exec<'a, E>(&self, executor: E) -> crate::Result<crate::db::DatabaseQueryResult>
+    where
+        E: sqlx::Executor<'a, Database = crate::db::Database>,
+    {
+        let mut query_builder: QueryBuilder = self.try_into()?;
+        let query = query_builder.deref_mut().build();
+        match query.execute(executor).await {
+            Ok(result) => Ok(result.into()),
+            Err(err) => Err(anyhow::anyhow!(err.to_string()).into()),
+        }
+    }
+    pub async fn fetch_one_exec<'a, E>(&self, executor: E) -> crate::Result<crate::db::DatabaseRow>
+    where
+        E: sqlx::Executor<'a, Database = crate::db::Database>,
+    {
+        let mut query_builder: QueryBuilder = self.try_into()?;
+        let query = query_builder.deref_mut().build();
+        match query.fetch_one(executor).await {
+            Ok(val) => Ok(val),
+            Err(err) => Err(anyhow::anyhow!(err.to_string()).into()),
+        }
+    }
+    pub async fn fetch_one_as_exec<'a, T, E>(&self, executor: E) -> crate::Result<T>
+    where
+        for<'b> T: Send + Unpin + sqlx::FromRow<'b, crate::db::DatabaseRow>,
+        E: sqlx::Executor<'a, Database = crate::db::Database>,
+    {
+        let mut query_builder: QueryBuilder = self.try_into()?;
+        let query_as = query_builder.build_query_as::<T>();
+        match query_as.fetch_one(executor).await {
+            Ok(val) => Ok(val),
+            Err(err) => Err(anyhow::anyhow!(err.to_string()).into()),
+        }
+    }
+    pub(crate) async fn fetch_all_exec<'a, E>(&self, executor: E) -> crate::Result<Vec<crate::db::DatabaseRow>>
+    where
+        E: sqlx::Executor<'a, Database = crate::db::Database>,
+    {
+        let mut query_builder: QueryBuilder = self.try_into()?;
+        let query = query_builder.build();
+        match query.fetch_all(executor).await {
+            Ok(val) => Ok(val),
+            Err(err) => Err(anyhow::anyhow!(err.to_string()).into()),
+        }
+    }
+    pub(crate) async fn fetch_all_as_exec<'a, T, E>(&self, executor: E) -> crate::Result<Vec<T>>
+    where
+        for<'b> T: Send + Unpin + sqlx::FromRow<'b, crate::db::DatabaseRow>,
+        E: sqlx::Executor<'a, Database = crate::db::Database>,
+    {
+        let mut query_builder: QueryBuilder = self.try_into()?;
+        let query_as = query_builder.build_query_as::<T>();
+        match query_as.fetch_all(executor).await {
+            Ok(val) => Ok(val),
+            Err(err) => Err(anyhow::anyhow!(err.to_string()).into()),
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {

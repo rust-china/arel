@@ -42,36 +42,3 @@ pub(crate) fn impl_primary_keys(input: &crate::ItemInput) -> syn::Result<proc_ma
 
     Ok(ret_token_stream)
 }
-
-// fn primary_values(&self) -> Vec<arel::Value>;
-pub(crate) fn impl_primary_values(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
-    let mut sub_clauses = vec![];
-
-    let fields = input.struct_fields()?;
-    for field in fields.iter() {
-        let ident = &field.ident;
-        let field_name = {
-            if let Some((rename, _)) = crate::ItemInput::get_field_path_value(field, vec!["arel"], "rename", None)? {
-                rename
-            } else {
-                match ident {
-                    Some(ident) => ident.to_string().trim_start_matches("r#").to_string(),
-                    _ => return Err(syn::Error::new_spanned(field, "Field name can not Blank!")),
-                }
-            }
-        };
-        sub_clauses.push(quote::quote!(
-            if Self::primary_keys().contains(&#field_name) {
-                primary_values.push(self.#ident.clone().into());
-            }
-        ));
-    }
-
-    Ok(quote::quote!(
-        fn primary_values(&self) -> Vec<arel::Value> {
-            let mut primary_values = vec![];
-            #(#sub_clauses)*
-            primary_values
-        }
-    ))
-}

@@ -16,6 +16,7 @@ pub mod prelude;
 pub mod sql;
 pub mod traits;
 pub mod value;
+pub use async_trait;
 
 pub use arel_macros::{self, arel};
 pub use bytes;
@@ -28,7 +29,10 @@ pub use error::Error;
 pub use manager::SelectManager;
 pub use sql::Sql;
 pub use statements::{join::JoinConst, order::SortConst};
-pub use value::{sub_value, Value};
+pub use value::{
+    active_vulue::{ActiveValue, Set},
+    sub_value, Value,
+};
 
-pub use traits::{arel_attribute_from_row::ArelAttributeFromRow, Arel, SuperArel};
+pub use traits::{arel_attribute_from_row::ArelAttributeFromRow, arel_model::ArelModel, arel_persisted::ArelPersisted, Arel, SuperArel};
 pub type Result<T> = std::result::Result<T, crate::Error>;

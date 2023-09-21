@@ -14,3 +14,4 @@ proc-macro = true
 syn = { version = "2", features = ["extra-traits", "full"] }
 proc-macro2 = { version = "1" }
 quote = { version = "1" }
+regex = "1.9"

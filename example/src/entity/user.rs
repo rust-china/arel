@@ -75,14 +75,15 @@ impl From<Type> for arel::Value {
 #[arel(table_name = "users")]
 pub struct User {
     #[arel(primary_key)]
-    id: i32,
+    pub id: i32,
     #[arel(primary_key)]
-    name: String,
-    age: Option<i32>,
-    gender: Option<Gender>,
-    r#type: Type,
-    address: Option<String>,
-    expired_at: Option<chrono::DateTime<chrono::FixedOffset>>,
+    pub name: String,
+    pub age: Option<i32>,
+    pub gender: Option<Gender>,
+    pub r#type: Type,
+    pub address: Option<String>,
+    pub expired_at: Option<chrono::DateTime<chrono::FixedOffset>>,
+    pub created_at: chrono::DateTime<chrono::FixedOffset>,
 }
 impl Arel for User {}
 
@@ -107,11 +108,12 @@ pub async fn init_db() -> arel::Result<()> {
 					(
 							id             INTEGER PRIMARY KEY NOT NULL,
 							name           VARCHAR(255) NOT NULL,
-							age   				 INT(11),
+							age   		   INT(11),
 							gender         INT(1) NOT NULL DEFAULT 0,
 							type           VARCHAR(255) NOT NULL default 'ADMIN',
 							address        VARCHAR(255),
-							expired_at     DATETIME
+							expired_at     DATETIME,
+                            created_at     DATETIME DEFAULT CURRENT_TIMESTAMP
 					);",
     )
     .execute(visitor.pool())
