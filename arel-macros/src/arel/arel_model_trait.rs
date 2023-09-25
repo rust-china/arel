@@ -47,7 +47,7 @@ pub(crate) fn impl_primary_values(input: &crate::ItemInput) -> syn::Result<proc_
     ))
 }
 
-// async fn insert_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: sqlx::Executor<'a, Database = crate::db::Database>;
+// async fn insert_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: arel::sqlx::Executor<'a, Database = crate::db::Database>;
 pub(crate) fn impl_insert_exec(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
     let fields = input.struct_fields()?;
 
@@ -124,7 +124,7 @@ pub(crate) fn impl_insert_exec(input: &crate::ItemInput) -> syn::Result<proc_mac
     ))
 }
 
-// async fn update_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: sqlx::Executor<'a, Database = crate::db::Database>;
+// async fn update_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: arel::sqlx::Executor<'a, Database = arel::db::Database>;
 pub(crate) fn impl_update_exec(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
     let fields = input.struct_fields()?;
 
@@ -195,7 +195,60 @@ pub(crate) fn impl_update_exec(input: &crate::ItemInput) -> syn::Result<proc_mac
     ))
 }
 
-// async fn destroy_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: sqlx::Executor<'a, Database = crate::db::Database>;
+// async fn increment_exec<'a, K: Send + ToString, E>(&mut self, key: K, step: i32, executor: E) -> arel::Result<()> where E: sqlx::Executor<'a, Database = arel::db::Database>
+pub(crate) fn impl_increment_exec(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
+    let fields = input.struct_fields()?;
+    let mut update_init_clause = proc_macro2::TokenStream::new();
+    for field in fields.iter() {
+        let ident = &field.ident;
+        // let r#type = &field.ty;
+        let field_name = {
+            if let Some((rename, _)) = crate::ItemInput::get_field_path_value(field, vec!["arel"], "rename", None)? {
+                rename
+            } else {
+                match ident {
+                    Some(ident) => ident.to_string().trim_start_matches("r#").to_string(),
+                    _ => return Err(syn::Error::new_spanned(field, "Field name can not Blank!")),
+                }
+            }
+        };
+        update_init_clause.extend(quote::quote!(
+            let field_name = #field_name;
+            if update_field == stringify!(ident).to_string().trim_start_matches("r#").to_string() {
+                update_field = field_name.to_string();
+            }
+        ));
+    }
+    let mut set_all_to_unchanged_clause = proc_macro2::TokenStream::new();
+    for field in fields.iter() {
+        let ident = &field.ident;
+        // let r#type = &field.ty;
+        set_all_to_unchanged_clause.extend(quote::quote!(
+            if let arel::ActiveValue::Changed(nv, ov) = &self.#ident {
+                self.#ident = arel::ActiveValue::Unchanged(nv.clone());
+            }
+        ));
+    }
+
+    Ok(quote::quote!(
+        async fn increment_exec<'a, K: Send + ToString, E>(&mut self, key: K, step: i32, executor: E) -> arel::Result<()>
+        where
+            E: arel::sqlx::Executor<'a, Database = arel::db::Database>,
+        {
+            let mut update_field = key.to_string().trim_start_matches("r#").to_string();
+            #update_init_clause
+
+            if let Some(increment_sql) = arel::statements::increment::Increment::<Self::Model>::new(update_field, step, Self::Model::primary_keys().clone(), self.primary_values().clone()).to_sql()? {
+                *self = increment_sql.fetch_one_as_with_exec(executor).await?;
+                Ok(())
+            } else {
+                Err(arel::Error::Message("sql error".to_string()))
+            }
+        }
+    ))
+}
+
+// async fn destroy_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: arel::sqlx::Executor<'a, Database = crate::db::Database>;
 pub(crate) fn impl_destroy_exec(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
     let fields = input.struct_fields()?;
 

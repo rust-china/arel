@@ -178,9 +178,17 @@ mod tests {
         let mut arel_user: ArelUser = user.into();
         let old_name = arel_user.name.clone();
         arel_user.name.set("hello2");
+        arel_user.age.set(20);
         assert_eq!(arel_user.name, arel::ActiveValue::Changed("hello2".into(), Box::new(old_name)));
         arel_user.save().await?;
         assert_eq!(arel_user.name, arel::ActiveValue::Unchanged("hello2".into()));
+
+        // increment
+        arel_user.increment("age", 5).await?;
+        assert_eq!(arel_user.age, arel::ActiveValue::Unchanged(25.into()));
+        arel_user.decrement("age", 5).await?;
+        assert_eq!(arel_user.age, arel::ActiveValue::Unchanged(20.into()));
+
         Ok(())
     }
 

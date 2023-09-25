@@ -21,6 +21,19 @@ pub trait ArelModel: ArelPersisted + Sized {
         }
     }
     async fn save(&mut self) -> crate::Result<()>;
+    async fn increment_exec<'a, K: Send + ToString, E>(&mut self, key: K, step: i32, executor: E) -> crate::Result<()>
+    where
+        E: sqlx::Executor<'a, Database = crate::db::Database>;
+    async fn decrement_exec<'a, K: Send + ToString, E>(&mut self, key: K, step: i32, executor: E) -> crate::Result<()>
+    where
+        E: sqlx::Executor<'a, Database = crate::db::Database>,
+    {
+        self.increment_exec(key, step * -1, executor).await
+    }
+    async fn increment<K: Send + ToString>(&mut self, key: K, step: i32) -> crate::Result<()>;
+    async fn decrement<K: Send + ToString>(&mut self, key: K, step: i32) -> crate::Result<()> {
+        self.increment(key, step * -1).await
+    }
     async fn destroy_exec<'a, E>(&mut self, executor: E) -> crate::Result<()>
     where
         E: sqlx::Executor<'a, Database = crate::db::Database>;

@@ -167,8 +167,9 @@ fn do_expand_arel_model(input: &crate::ItemInput) -> syn::Result<proc_macro2::To
     let arel_model_trait_impl_primary_values = arel_model_trait::impl_primary_values(input)?;
     let arel_model_trait_impl_insert_exec = arel_model_trait::impl_insert_exec(input)?;
     let arel_model_trait_impl_update_exec = arel_model_trait::impl_update_exec(input)?;
-    let arel_model_trait_from_model = arel_model_trait::impl_from_model(input)?;
+    let arel_model_trait_impl_increment_exec = arel_model_trait::impl_increment_exec(input)?;
     let arel_model_trait_impl_destroy_exec = arel_model_trait::impl_destroy_exec(input)?;
+    let arel_model_trait_from_model = arel_model_trait::impl_from_model(input)?;
 
     let generics = input.generics()?;
     let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
@@ -186,13 +187,19 @@ fn do_expand_arel_model(input: &crate::ItemInput) -> syn::Result<proc_macro2::To
             type Model = #struct_ident #type_generics;
             // fn primary_values(&self) -> Vec<arel::Value>;
             #arel_model_trait_impl_primary_values
-            // async fn insert_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: sqlx::Executor<'a, Database = arel::db::Database>;
+            // async fn insert_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: arel::sqlx::Executor<'a, Database = arel::db::Database>;
             #arel_model_trait_impl_insert_exec
-            // async fn update_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: sqlx::Executor<'a, Database = arel::db::Database>;
+            // async fn update_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: arel::sqlx::Executor<'a, Database = arel::db::Database>;
             #arel_model_trait_impl_update_exec
             // async fn save(&mut self) -> arel::Result<()>;
             async fn save(&mut self) -> arel::Result<()> {
                 self.save_exec(Self::Model::pool()?).await
+            }
+            // async fn increment_exec<'a, K: Send + ToString, E>(&mut self, key: K, step: i32, executor: E) -> arel::Result<()> where E: arel::sqlx::Executor<'a, Database = arel::db::Database>
+            #arel_model_trait_impl_increment_exec
+            // async fn increment<K: Send + ToString>(&mut self, key: K, step: i32) -> arel::Result<()>
+            async fn increment<K: Send + ToString>(&mut self, key: K, step: i32) -> arel::Result<()> {
+                self.increment_exec(key, step, Self::Model::pool()?).await
             }
             // async fn destroy_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: sqlx::Executor<'a, Database = arel::db::Database>;
             #arel_model_trait_impl_destroy_exec
