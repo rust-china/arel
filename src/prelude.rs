@@ -4,5 +4,5 @@ pub use serde_json;
 
 pub use crate::statements::ArelStatement;
 pub use crate::Set;
+pub use crate::{arel, arel_enum};
 pub use crate::{Arel, ArelAttributeFromRow, ArelModel, ArelPersisted, SuperArel};
-pub use arel_macros::arel;

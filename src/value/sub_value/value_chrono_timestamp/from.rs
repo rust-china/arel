@@ -1,4 +1,5 @@
 use super::ValueChronoTimestamp;
+use std::time::SystemTime;
 
 /// # Examples
 /// Value<chrono::DateTime<chrono::FixedOffset>>
@@ -32,6 +33,13 @@ impl From<chrono::DateTime<chrono::Utc>> for ValueChronoTimestamp {
     fn from(val: chrono::DateTime<chrono::Utc>) -> Self {
         let value = val.into();
         ValueChronoTimestamp(Some(value))
+    }
+}
+
+impl From<SystemTime> for ValueChronoTimestamp {
+    fn from(value: SystemTime) -> Self {
+        let utc_value: chrono::DateTime<chrono::Utc> = value.into();
+        utc_value.into()
     }
 }
 

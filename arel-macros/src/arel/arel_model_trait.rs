@@ -47,8 +47,8 @@ pub(crate) fn impl_primary_values(input: &crate::ItemInput) -> syn::Result<proc_
     ))
 }
 
-// async fn insert_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: arel::sqlx::Executor<'a, Database = crate::db::Database>;
-pub(crate) fn impl_insert_exec(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
+// async fn insert_with_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: arel::sqlx::Executor<'a, Database = crate::db::Database>;
+pub(crate) fn impl_insert_with_exec(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
     let fields = input.struct_fields()?;
 
     let mut insert_init_clause = proc_macro2::TokenStream::new();
@@ -97,7 +97,7 @@ pub(crate) fn impl_insert_exec(input: &crate::ItemInput) -> syn::Result<proc_mac
     }
 
     Ok(quote::quote!(
-        async fn insert_exec<'a, E>(&mut self, executor: E) -> arel::Result<()>
+        async fn insert_with_exec<'a, E>(&mut self, executor: E) -> arel::Result<()>
         where
             E: arel::sqlx::Executor<'a, Database = arel::db::Database>,
         {
@@ -124,8 +124,8 @@ pub(crate) fn impl_insert_exec(input: &crate::ItemInput) -> syn::Result<proc_mac
     ))
 }
 
-// async fn update_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: arel::sqlx::Executor<'a, Database = arel::db::Database>;
-pub(crate) fn impl_update_exec(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
+// async fn update_with_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: arel::sqlx::Executor<'a, Database = arel::db::Database>;
+pub(crate) fn impl_update_with_exec(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
     let fields = input.struct_fields()?;
 
     let mut update_init_clause = proc_macro2::TokenStream::new();
@@ -166,7 +166,7 @@ pub(crate) fn impl_update_exec(input: &crate::ItemInput) -> syn::Result<proc_mac
     }
 
     Ok(quote::quote!(
-        async fn update_exec<'a, E>(&mut self, executor: E) -> arel::Result<()>
+        async fn update_with_exec<'a, E>(&mut self, executor: E) -> arel::Result<()>
         where
             E: arel::sqlx::Executor<'a, Database = arel::db::Database>,
         {
@@ -195,8 +195,8 @@ pub(crate) fn impl_update_exec(input: &crate::ItemInput) -> syn::Result<proc_mac
     ))
 }
 
-// async fn increment_exec<'a, K: Send + ToString, E>(&mut self, key: K, step: i32, executor: E) -> arel::Result<()> where E: sqlx::Executor<'a, Database = arel::db::Database>
-pub(crate) fn impl_increment_exec(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
+// async fn increment_with_exec<'a, K: Send + ToString, E>(&mut self, key: K, step: i32, executor: E) -> arel::Result<()> where E: sqlx::Executor<'a, Database = arel::db::Database>
+pub(crate) fn impl_increment_with_exec(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
     let fields = input.struct_fields()?;
     let mut update_init_clause = proc_macro2::TokenStream::new();
     for field in fields.iter() {
@@ -231,7 +231,7 @@ pub(crate) fn impl_increment_exec(input: &crate::ItemInput) -> syn::Result<proc_
     }
 
     Ok(quote::quote!(
-        async fn increment_exec<'a, K: Send + ToString, E>(&mut self, key: K, step: i32, executor: E) -> arel::Result<()>
+        async fn increment_with_exec<'a, K: Send + ToString, E>(&mut self, key: K, step: i32, executor: E) -> arel::Result<()>
         where
             E: arel::sqlx::Executor<'a, Database = arel::db::Database>,
         {
@@ -248,8 +248,8 @@ pub(crate) fn impl_increment_exec(input: &crate::ItemInput) -> syn::Result<proc_
     ))
 }
 
-// async fn destroy_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: arel::sqlx::Executor<'a, Database = crate::db::Database>;
-pub(crate) fn impl_destroy_exec(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
+// async fn destroy_with_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: arel::sqlx::Executor<'a, Database = crate::db::Database>;
+pub(crate) fn impl_destroy_with_exec(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
     let fields = input.struct_fields()?;
 
     let mut set_all_to_changed_clause = proc_macro2::TokenStream::new();
@@ -269,7 +269,7 @@ pub(crate) fn impl_destroy_exec(input: &crate::ItemInput) -> syn::Result<proc_ma
         ));
     }
     Ok(quote::quote!(
-        async fn destroy_exec<'a, E>(&mut self, executor: E) -> arel::Result<()>
+        async fn destroy_with_exec<'a, E>(&mut self, executor: E) -> arel::Result<()>
         where
             E: arel::sqlx::Executor<'a, Database = arel::db::Database>,
         {

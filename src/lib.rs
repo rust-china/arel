@@ -18,7 +18,7 @@ pub mod traits;
 pub mod value;
 pub use async_trait;
 
-pub use arel_macros::{self, arel};
+pub use arel_macros::{self, arel, arel_enum};
 pub use bytes;
 pub use chrono;
 pub use serde_json;

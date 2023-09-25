@@ -1,75 +1,20 @@
 use arel::prelude::*;
-
-#[derive(Debug, Clone, PartialEq)]
+#[arel_enum]
 pub enum Gender {
-    Unknown = 0,
-    Male = 1,
-    Female = 2,
-}
-impl Default for Gender {
-    fn default() -> Self {
-        Self::Unknown
-    }
-}
-impl ArelAttributeFromRow for Gender {
-    fn from_row<'r, I>(row: &'r arel::db::DatabaseRow, index: I) -> Result<Self, sqlx::Error>
-    where
-        Self: Sized,
-        I: sqlx::ColumnIndex<arel::db::DatabaseRow>,
-    {
-        let value: u8 = row.try_get(index)?;
-        let ret = match value {
-            0 => Gender::Unknown,
-            1 => Gender::Male,
-            2 => Gender::Female,
-            v @ _ => return Err(sqlx::Error::Decode(format!("{}: {} can not decode", std::any::type_name::<Self>(), v).into())),
-        };
-        Ok(ret)
-    }
+    #[arel_enum(value = 0, default = true)]
+    Unknown,
+    #[arel_enum(value = 1)]
+    Male,
+    #[arel_enum(value = 2)]
+    Female,
 }
 
-impl From<Gender> for arel::Value {
-    fn from(value: Gender) -> Self {
-        match value {
-            Gender::Unknown => 0.into(),
-            Gender::Male => 1.into(),
-            Gender::Female => 2.into(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
+#[arel_enum]
 pub enum Type {
+    #[arel_enum(value = "USER", default = true)]
     User,
+    #[arel_enum(value = "ADMIN")]
     Admin,
-}
-impl Default for Type {
-    fn default() -> Self {
-        Self::User
-    }
-}
-impl ArelAttributeFromRow for Type {
-    fn from_row<'r, I>(row: &'r arel::db::DatabaseRow, index: I) -> Result<Self, sqlx::Error>
-    where
-        Self: Sized,
-        I: sqlx::ColumnIndex<arel::db::DatabaseRow>,
-    {
-        let value: String = row.try_get(index)?;
-        let ret = match value.as_str() {
-            "USER" => Self::User,
-            "ADMIN" => Self::Admin,
-            v @ _ => return Err(sqlx::Error::Decode(format!("{}: {} can not decode", std::any::type_name::<Self>(), v).into())),
-        };
-        Ok(ret)
-    }
-}
-impl From<Type> for arel::Value {
-    fn from(value: Type) -> Self {
-        match value {
-            Type::Admin => "ADMIN".into(),
-            Type::User => "USER".into(),
-        }
-    }
 }
 
 #[arel(table_name = "users")]
@@ -86,20 +31,6 @@ pub struct User {
     pub created_at: chrono::DateTime<chrono::FixedOffset>,
 }
 impl Arel for User {}
-
-// impl<'r> arel::sqlx::FromRow<'r, arel::db::DatabaseRow> for User {
-//     fn from_row(row: &'r arel::db::DatabaseRow) -> Result<Self, sqlx::Error> {
-//         let mut model = Self::default();
-//         model.id = <i32 as arel::ArelAttributeFromRow>::from_row(row, "id")?;
-//         model.name = <String as arel::ArelAttributeFromRow>::from_row(row, "name")?;
-//         model.age = <Option<i32> as arel::ArelAttributeFromRow>::from_row(row, "age")?;
-//         model.gender = <Gender as arel::ArelAttributeFromRow>::from_row(row, "gender")?;
-//         model.r#type = <String as arel::ArelAttributeFromRow>::from_row(row, "type")?;
-//         model.address = <Option<String> as arel::ArelAttributeFromRow>::from_row(row, "address")?;
-//         model.expired_at = <Option<chrono::DateTime<chrono::FixedOffset>> as arel::ArelAttributeFromRow>::from_row(row, "expired_at")?;
-//         Ok(model)
-//     }
-// }
 
 pub async fn init_db() -> arel::Result<()> {
     let visitor = arel::db::visitor::get_or_init(|| Box::pin(async { arel::db::DatabasePoolOptions::new().max_connections(5).connect("sqlite::memory:").await })).await?;
