@@ -339,63 +339,44 @@ impl<M: Arel> SelectManager<M> {
         let sql = self.to_sql()?;
         Ok(sql.try_into()?)
     }
-    pub(crate) async fn fetch_one_exec<'a, E>(&self, executor: E) -> crate::Result<crate::db::DatabaseRow>
+    pub async fn fetch_count_with_exec<'a, E>(&self, executor: E) -> crate::Result<i64>
     where
         E: sqlx::Executor<'a, Database = crate::db::Database>,
     {
-        let sql = self.to_sql()?;
-        sql.fetch_one_exec(executor).await
-    }
-    pub async fn fetch_one(&self) -> crate::Result<crate::db::DatabaseRow> {
-        self.fetch_one_exec(M::pool()?).await
-    }
-    pub async fn fetch_count_exec<'a, E>(&self, executor: E) -> crate::Result<i64>
-    where
-        E: sqlx::Executor<'a, Database = crate::db::Database>,
-    {
-        let row: (i64,) = self.to_sql()?.fetch_one_as_exec(executor).await?;
+        let row: (i64,) = self.to_sql()?.fetch_one_as_with_exec(executor).await?;
         Ok(row.0)
     }
     pub async fn fetch_count(&self) -> crate::Result<i64> {
-        self.fetch_count_exec(M::pool()?).await
+        self.fetch_count_with_exec(M::pool()?).await
     }
-    pub(crate) async fn fetch_one_as_exec<'a, T: crate::ArelPersisted, E>(&self, executor: E) -> crate::Result<T>
+    pub(crate) async fn fetch_one_with_exec<'a, T: crate::ArelPersisted, E>(&self, executor: E) -> crate::Result<T>
     where
         for<'b> T: Send + Unpin + sqlx::FromRow<'b, crate::db::DatabaseRow>,
         E: sqlx::Executor<'a, Database = crate::db::Database>,
     {
-        let mut ret: T = self.to_sql()?.fetch_one_as_exec(executor).await?;
+        let mut ret: T = self.to_sql()?.fetch_one_as_with_exec(executor).await?;
         ret.set_persisted(true);
         Ok(ret)
     }
-    pub async fn fetch_one_as<T: crate::ArelPersisted>(&self) -> crate::Result<T>
+    pub async fn fetch_one<T: crate::ArelPersisted>(&self) -> crate::Result<T>
     where
         for<'b> T: Send + Unpin + sqlx::FromRow<'b, crate::db::DatabaseRow>,
     {
-        self.fetch_one_as_exec(M::pool()?).await
+        self.fetch_one_with_exec(M::pool()?).await
     }
-    pub(crate) async fn fetch_all_exec<'a, E>(&self, executor: E) -> crate::Result<Vec<crate::db::DatabaseRow>>
-    where
-        E: sqlx::Executor<'a, Database = crate::db::Database>,
-    {
-        self.to_sql()?.fetch_all_exec(executor).await
-    }
-    pub async fn fetch_all(&self) -> crate::Result<Vec<crate::db::DatabaseRow>> {
-        self.fetch_all_exec(M::pool()?).await
-    }
-    pub(crate) async fn fetch_all_as_exec<'a, T: crate::ArelPersisted, E>(&self, executor: E) -> crate::Result<Vec<T>>
+    pub(crate) async fn fetch_all_with_exec<'a, T: crate::ArelPersisted, E>(&self, executor: E) -> crate::Result<Vec<T>>
     where
         for<'b> T: Send + Unpin + sqlx::FromRow<'b, crate::db::DatabaseRow>,
         E: sqlx::Executor<'a, Database = crate::db::Database>,
     {
-        let mut array: Vec<T> = self.to_sql()?.fetch_all_as_exec(executor).await?;
+        let mut array: Vec<T> = self.to_sql()?.fetch_all_as_with_exec(executor).await?;
         array.iter_mut().for_each(|v| v.set_persisted(true));
         Ok(array)
     }
-    pub async fn fetch_all_as<T: crate::ArelPersisted>(&self) -> crate::Result<Vec<T>>
+    pub async fn fetch_all<T: crate::ArelPersisted>(&self) -> crate::Result<Vec<T>>
     where
         for<'b> T: Send + Unpin + sqlx::FromRow<'b, crate::db::DatabaseRow>,
     {
-        self.fetch_all_as_exec(M::pool()?).await
+        self.fetch_all_with_exec(M::pool()?).await
     }
 }

@@ -13,7 +13,7 @@ async fn main() -> arel::Result<()> {
 
     println!("{:?}", std::any::type_name::<std::option::Option<Vec<i32>>>());
 
-    let first_user: entity::User = entity::User::query().fetch_one_as().await?;
+    let first_user: entity::User = entity::User::query().fetch_one().await?;
     let mut arel_first_user: entity::user::ArelUser = first_user.into();
     println!("{:?}", arel_first_user.primary_values());
     println!("db -->: {:?}", arel_first_user);

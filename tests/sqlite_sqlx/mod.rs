@@ -153,6 +153,11 @@ mod tests {
         assert_eq!(first_user.gender, Some(Gender::Unknown));
         assert_eq!(first_user.r#type, Type::Admin);
 
+        let first_user: User = User::query().fetch_one().await?;
+        let arel_first_user: ArelUser = first_user.into();
+        let arel_first_user2: ArelUser = User::query().fetch_one().await?;
+        assert_eq!(arel_first_user, arel_first_user2);
+
         Ok(())
     }
     async fn test_insert() -> anyhow::Result<()> {
@@ -169,7 +174,7 @@ mod tests {
         Ok(())
     }
     async fn test_update() -> anyhow::Result<()> {
-        let user: User = User::query().order_desc("id").fetch_one_as().await?;
+        let user: User = User::query().order_desc("id").fetch_one().await?;
         let mut arel_user: ArelUser = user.into();
         let old_name = arel_user.name.clone();
         arel_user.name.set("hello2");
@@ -180,7 +185,7 @@ mod tests {
     }
 
     async fn test_destroy() -> anyhow::Result<()> {
-        let user: User = User::query().order_desc("id").fetch_one_as().await?;
+        let user: User = User::query().order_desc("id").fetch_one().await?;
         let mut arel_user: ArelUser = user.into();
         let old_id = arel_user.id.clone();
         arel_user.destroy().await?;

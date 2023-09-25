@@ -106,11 +106,9 @@ pub(crate) fn impl_insert_exec(input: &crate::ItemInput) -> syn::Result<proc_mac
             #insert_init_clause
 
             if let Some(insert_sql) = arel::statements::insert::Insert::<Self::Model>::new(insert_fields, insert_values).to_sql()? {
-                let mut model: Self::Model = insert_sql.fetch_one_as_exec(executor).await?;
-                model.set_persisted(true);
-                *self = model.into();
+                *self = insert_sql.fetch_one_as_with_exec(executor).await?;
                 Ok(())
-                // match insert_sql.fetch_one_as(executor).await {
+                // match insert_sql.fetch_one_with_exec(executor).await {
                 //     Ok(val) => {
                 //         #set_primary_id_clause
                 //         #set_all_to_unchanged_clause
@@ -177,9 +175,7 @@ pub(crate) fn impl_update_exec(input: &crate::ItemInput) -> syn::Result<proc_mac
             #update_init_clause
 
             if let Some(update_sql) =arel::statements::update::Update::<Self::Model>::new(update_fields, update_values, Self::Model::primary_keys().clone(), self.primary_values().clone()).to_sql()? {
-                let mut model: Self::Model = update_sql.fetch_one_as_exec(executor).await?;
-                model.set_persisted(true);
-                *self = model.into();
+                *self = update_sql.fetch_one_as_with_exec(executor).await?;
                 Ok(())
                 // match update_sql.exec(executor).await {
                 //     Ok(val) => {

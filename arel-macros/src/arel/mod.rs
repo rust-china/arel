@@ -27,13 +27,15 @@ pub fn create_arel(args: TokenStream, input: TokenStream) -> TokenStream {
 
 fn do_expand(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
     let arel_trail = do_expand_arel(input)?;
-    let sqlx_from_row = do_expand_sqlx_from_row(input)?;
+    let model_sqlx_from_row = do_expand_model_sqlx_from_row(input)?;
     let arel_model_trait = do_expand_arel_model(input)?;
+    let arel_model_sqlx_from_row = do_expand_arel_model_sqlx_from_row(input)?;
 
     Ok(quote::quote!(
         #arel_trail
-        #sqlx_from_row
+        #model_sqlx_from_row
         #arel_model_trait
+        #arel_model_sqlx_from_row
     ))
 }
 
@@ -96,7 +98,7 @@ fn do_expand_arel(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStr
 //         Ok(model)
 //     }
 // }
-fn do_expand_sqlx_from_row(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
+fn do_expand_model_sqlx_from_row(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
     let struct_ident = input.ident()?;
     let fields = input.struct_fields()?;
 
@@ -210,5 +212,24 @@ fn do_expand_arel_model(input: &crate::ItemInput) -> syn::Result<proc_macro2::To
         }
 
         #arel_model_trait_from_model
+    ))
+}
+
+fn do_expand_arel_model_sqlx_from_row(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
+    let struct_ident = input.ident()?;
+    let arel_model_ident = syn::Ident::new(&format!("Arel{}", struct_ident.to_string()), struct_ident.span());
+
+    let mut generics = input.generics()?.clone();
+    generics.params.push(syn::parse_quote!('_r));
+    let (impl_generics, _, _) = generics.split_for_impl();
+    let (_, type_generics, where_clause) = input.generics()?.split_for_impl();
+    Ok(quote::quote!(
+        impl #impl_generics arel::sqlx::FromRow<'_r, arel::db::DatabaseRow> for #arel_model_ident #type_generics #where_clause  {
+            fn from_row(row: &'_r arel::db::DatabaseRow) -> arel::sqlx::Result<Self, arel::sqlx::Error> {
+                let mut model = #struct_ident #type_generics::from_row(row)?;
+                model.set_persisted(true);
+                return Ok(model.into())
+            }
+        }
     ))
 }

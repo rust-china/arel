@@ -162,7 +162,7 @@ impl Sql {
             Err(err) => Err(anyhow::anyhow!(err.to_string()).into()),
         }
     }
-    pub async fn fetch_one_exec<'a, E>(&self, executor: E) -> crate::Result<crate::db::DatabaseRow>
+    pub async fn fetch_one_with_exec<'a, E>(&self, executor: E) -> crate::Result<crate::db::DatabaseRow>
     where
         E: sqlx::Executor<'a, Database = crate::db::Database>,
     {
@@ -173,7 +173,7 @@ impl Sql {
             Err(err) => Err(anyhow::anyhow!(err.to_string()).into()),
         }
     }
-    pub async fn fetch_one_as_exec<'a, T, E>(&self, executor: E) -> crate::Result<T>
+    pub async fn fetch_one_as_with_exec<'a, T, E>(&self, executor: E) -> crate::Result<T>
     where
         for<'b> T: Send + Unpin + sqlx::FromRow<'b, crate::db::DatabaseRow>,
         E: sqlx::Executor<'a, Database = crate::db::Database>,
@@ -185,7 +185,8 @@ impl Sql {
             Err(err) => Err(anyhow::anyhow!(err.to_string()).into()),
         }
     }
-    pub(crate) async fn fetch_all_exec<'a, E>(&self, executor: E) -> crate::Result<Vec<crate::db::DatabaseRow>>
+    #[allow(dead_code)]
+    pub(crate) async fn fetch_all_with_exec<'a, E>(&self, executor: E) -> crate::Result<Vec<crate::db::DatabaseRow>>
     where
         E: sqlx::Executor<'a, Database = crate::db::Database>,
     {
@@ -196,7 +197,7 @@ impl Sql {
             Err(err) => Err(anyhow::anyhow!(err.to_string()).into()),
         }
     }
-    pub(crate) async fn fetch_all_as_exec<'a, T, E>(&self, executor: E) -> crate::Result<Vec<T>>
+    pub(crate) async fn fetch_all_as_with_exec<'a, T, E>(&self, executor: E) -> crate::Result<Vec<T>>
     where
         for<'b> T: Send + Unpin + sqlx::FromRow<'b, crate::db::DatabaseRow>,
         E: sqlx::Executor<'a, Database = crate::db::Database>,
