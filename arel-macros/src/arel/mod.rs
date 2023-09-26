@@ -165,6 +165,7 @@ fn do_expand_arel_model(input: &crate::ItemInput) -> syn::Result<proc_macro2::To
     }
 
     let arel_model_trait_impl_primary_values = arel_model_trait::impl_primary_values(input)?;
+    let arel_model_trait_impl_assign = arel_model_trait::impl_assign(input)?;
     let arel_model_trait_impl_insert_with_exec = arel_model_trait::impl_insert_with_exec(input)?;
     let arel_model_trait_impl_update_with_exec = arel_model_trait::impl_update_with_exec(input)?;
     let arel_model_trait_impl_increment_with_exec = arel_model_trait::impl_increment_with_exec(input)?;
@@ -176,7 +177,7 @@ fn do_expand_arel_model(input: &crate::ItemInput) -> syn::Result<proc_macro2::To
 
     let vis = input.vis()?;
     Ok(quote::quote!(
-        #[derive(Clone, Debug, PartialEq, Default)]
+        #[derive(Clone, Debug, Default, PartialEq)]
         #vis struct #arel_model_ident #generics {
             pub __persisted__: bool,
             #(#model_fields),*
@@ -187,6 +188,8 @@ fn do_expand_arel_model(input: &crate::ItemInput) -> syn::Result<proc_macro2::To
             type Model = #struct_ident #type_generics;
             // fn primary_values(&self) -> Vec<arel::Value>;
             #arel_model_trait_impl_primary_values
+            // fn assign(&mut self, other: &Self) -> &mut Self;
+            #arel_model_trait_impl_assign
             // async fn insert_with_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: arel::sqlx::Executor<'a, Database = arel::db::Database>;
             #arel_model_trait_impl_insert_with_exec
             // async fn update_with_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: arel::sqlx::Executor<'a, Database = arel::db::Database>;
@@ -222,6 +225,13 @@ fn do_expand_arel_model(input: &crate::ItemInput) -> syn::Result<proc_macro2::To
     ))
 }
 
+// impl<'r> arel::sqlx::FromRow<'r, arel::db::DatabaseRow> for ArelUser {
+//     fn from_row(row: &'r arel::db::DatabaseRow) -> Result<Self, sqlx::Error> {
+//         let mut model = <Self as arel::ArelModel>::Model::from_row(row)?;
+//         model.set_persisted(true);
+//         return Ok(model.into())
+//     }
+// }
 fn do_expand_arel_model_sqlx_from_row(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
     let struct_ident = input.ident()?;
     let arel_model_ident = syn::Ident::new(&format!("Arel{}", struct_ident.to_string()), struct_ident.span());
@@ -233,7 +243,7 @@ fn do_expand_arel_model_sqlx_from_row(input: &crate::ItemInput) -> syn::Result<p
     Ok(quote::quote!(
         impl #impl_generics arel::sqlx::FromRow<'_r, arel::db::DatabaseRow> for #arel_model_ident #type_generics #where_clause  {
             fn from_row(row: &'_r arel::db::DatabaseRow) -> arel::sqlx::Result<Self, arel::sqlx::Error> {
-                let mut model = #struct_ident #type_generics::from_row(row)?;
+                let mut model = <Self as arel::ArelModel>::Model::from_row(row)?;
                 model.set_persisted(true);
                 return Ok(model.into())
             }

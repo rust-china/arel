@@ -47,6 +47,34 @@ pub(crate) fn impl_primary_values(input: &crate::ItemInput) -> syn::Result<proc_
     ))
 }
 
+// fn assign(&mut self, other: &Self) -> &mut Self;
+pub(crate) fn impl_assign(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
+    let fields = input.struct_fields()?;
+
+    let mut assign_fields_clause = vec![];
+    for field in fields.iter() {
+        let ident = &field.ident;
+        assign_fields_clause.push(quote::quote!(
+            match &other.#ident {
+                arel::ActiveValue::Changed(nv, _) => {
+                    self.#ident.set(nv.clone());
+                }
+                arel::ActiveValue::Unchanged(v) => {
+                    self.#ident.set(v.clone());
+                }
+                arel::ActiveValue::NotSet => ()
+            }
+        ));
+    }
+
+    Ok(quote::quote!(
+        fn assign(&mut self, other: &Self) -> &mut Self {
+            #(#assign_fields_clause)*
+            self
+        }
+    ))
+}
+
 // async fn insert_with_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: arel::sqlx::Executor<'a, Database = crate::db::Database>;
 pub(crate) fn impl_insert_with_exec(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
     let fields = input.struct_fields()?;

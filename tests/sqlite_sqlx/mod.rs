@@ -178,7 +178,7 @@ mod tests {
         let mut arel_user: ArelUser = user.into();
         let old_name = arel_user.name.clone();
         arel_user.name.set("hello2");
-        arel_user.age.set(20);
+        arel_user.assign(&ArelUser { age: Set(20), ..Default::default() });
         assert_eq!(arel_user.name, arel::ActiveValue::Changed("hello2".into(), Box::new(old_name)));
         arel_user.save().await?;
         assert_eq!(arel_user.name, arel::ActiveValue::Unchanged("hello2".into()));
