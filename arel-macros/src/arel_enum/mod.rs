@@ -52,7 +52,7 @@ fn impl_enum_struct(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenS
 
     let vis = input.vis()?;
     Ok(quote::quote!(
-        #[derive(Clone, Debug, PartialEq)]
+        #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
         #vis enum #enum_ident #generics {
             #(#enum_variants),*
         }

@@ -61,8 +61,9 @@ fn do_expand_arel(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStr
 
     let vis = input.vis()?;
     Ok(quote::quote!(
-        #[derive(Clone, Debug, Default, PartialEq)]
+        #[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
         #vis struct #struct_ident #generics {
+            #[serde(default,skip_serializing)]
             pub __persisted__: bool,
             #(#model_fields),*
         }
@@ -177,8 +178,9 @@ fn do_expand_arel_model(input: &crate::ItemInput) -> syn::Result<proc_macro2::To
 
     let vis = input.vis()?;
     Ok(quote::quote!(
-        #[derive(Clone, Debug, Default, PartialEq)]
+        #[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
         #vis struct #arel_model_ident #generics {
+            #[serde(default,skip_serializing)]
             pub __persisted__: bool,
             #(#model_fields),*
         }

@@ -9,8 +9,10 @@
 
 ### Install
 
-```Cargo.toml
-arel = { version = "0.3", features = ["runtime-tokio-native-tls", "sqlite"] }
+```rust
+// Cargo.toml
+serde = { version = "1.0", features = ["derive"] }
+arel = { version = "0.3", features = ["runtime-tokio-native-tls", "sqlite"] } // sqlte | mysql | postgres
 ```
 
 ### Demo
@@ -39,7 +41,7 @@ let count = User::query().select_sql("COUNT(*)").fetch_count().await?;
 println!("total: {}", count);
 
 // create
-let mut active_user = ArelUser {
+let mut active_user = User {
   name: Set("n1"),
   ..Default::default()
 };
@@ -47,25 +49,19 @@ active_user.save().await?;
 
 // select
 let user: User = User::query().r#where("id", 1).fetch_one().await?;
-let _active_user: ArelUser = user.into();
-
-let user: ArelUser = User::query().r#where("id", 1).fetch_one().await?;
-
 let uesrs: Vec<User> = User::query().where_range("id", ..=10).fetch_all().await?;
-let uesrs: Vec<ArelUser> = User::query().r#where("id", vec![1, 2, 3]).fetch_all().await?;
 
 // update
-let user: User = User::query().fetch_one().await?;
-let mut active_user: ArelUser = user.into();
+let mut user: User = User::query().fetch_one().await?;
 // active_user.name.set("n-1");
-active_user.assign(&ArelUser {
+user.assign(&User {
     name: Set("n-1"),
     ..Default::default()
 });
-active_user.save().await?;
+user.save().await?;
 
 // destroy
-active_user.destroy().await?;
+user.destroy().await?;
 ```
 
 ---
@@ -162,7 +158,7 @@ User::with_transaction(|tx| {
     //       .execute(tx.as_mut())
     //       .await?;
     // }
-    let mut active_user = ArelUser {
+    let mut active_user = User {
       name: Set("n1"),
       r#type: Set("ADMIN"),
       ..Default::default()
@@ -182,7 +178,7 @@ User::with_transaction(|tx| {
 <summary>increment</summary>
 
 ```rust
-let active_user: ArelUser = User::query().r#where("id", 1).fetch_one().await?;
+let active_user = User::query().r#where("id", 1).fetch_one().await?;
 active_user.increment_save("lock_version", 5).await?;
 ```
 

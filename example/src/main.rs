@@ -34,5 +34,19 @@ async fn main() -> arel::Result<()> {
     arel_new_user.destroy().await?;
     println!("destroy -->: {:?}", arel_new_user);
 
+    let first_user: entity::User = entity::User::query().fetch_one().await?;
+    println!("{:?}", serde_json::to_string(&first_user));
+    let active_user: entity::user::ArelUser = first_user.into();
+
+    let json = match serde_json::to_string(&active_user) {
+        Ok(v) => v,
+        Err(e) => return Err(e.into()),
+    };
+    println!("{:?}", json);
+    let to_user: entity::user::User = serde_json::from_str(&json)?;
+    println!("{:?}", to_user);
+    let to_arel_user: entity::user::ArelUser = serde_json::from_str(&json)?;
+    println!("{:?}", to_arel_user);
+
     Ok(())
 }

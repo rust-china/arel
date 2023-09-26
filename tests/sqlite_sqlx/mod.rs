@@ -1,6 +1,6 @@
 use arel::prelude::*;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Gender {
     Unknown = 0,
     Male = 1,
@@ -37,7 +37,7 @@ impl From<Gender> for arel::Value {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Type {
     User,
     Admin,
@@ -154,9 +154,14 @@ mod tests {
         assert_eq!(first_user.r#type, Type::Admin);
 
         let first_user: User = User::query().fetch_one().await?;
+        let first_user_json = serde_json::to_string(&first_user)?;
+
         let arel_first_user: ArelUser = first_user.into();
         let arel_first_user2: ArelUser = User::query().fetch_one().await?;
         assert_eq!(arel_first_user, arel_first_user2);
+
+        let arel_first_user_json = serde_json::to_string(&arel_first_user2)?;
+        assert_eq!(first_user_json, arel_first_user_json);
 
         Ok(())
     }

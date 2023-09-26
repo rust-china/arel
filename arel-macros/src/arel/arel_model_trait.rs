@@ -80,10 +80,10 @@ pub(crate) fn impl_insert_with_exec(input: &crate::ItemInput) -> syn::Result<pro
     let fields = input.struct_fields()?;
 
     let mut insert_init_clause = proc_macro2::TokenStream::new();
-    let mut set_primary_id_clause = proc_macro2::TokenStream::new();
+    // let mut set_primary_id_clause = proc_macro2::TokenStream::new();
     for field in fields.iter() {
         let ident = &field.ident;
-        let r#type = &field.ty;
+        // let r#type = &field.ty;
         let field_name = {
             if let Some((rename, _)) = crate::ItemInput::get_field_path_value(field, vec!["arel"], "rename", None)? {
                 rename
@@ -104,13 +104,13 @@ pub(crate) fn impl_insert_with_exec(input: &crate::ItemInput) -> syn::Result<pro
                 _ => ()
             }
         ));
-        if field_name == "id" {
-            set_primary_id_clause.extend(quote::quote!(
-                if let Some(last_insert_id) = val.last_insert_id() {
-                    self.#ident = arel::ActiveValue::Unchanged((last_insert_id as #r#type).into());
-                }
-            ));
-        }
+        // if field_name == "id" {
+        //     set_primary_id_clause.extend(quote::quote!(
+        //         if let Some(last_insert_id) = val.last_insert_id() {
+        //             self.#ident = arel::ActiveValue::Unchanged((last_insert_id as #r#type).into());
+        //         }
+        //     ));
+        // }
     }
 
     let mut set_all_to_unchanged_clause = proc_macro2::TokenStream::new();

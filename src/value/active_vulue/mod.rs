@@ -1,6 +1,7 @@
 mod eq;
 
 use crate::Value;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ActiveValue<V>
@@ -10,6 +11,33 @@ where
     Changed(V, Box<ActiveValue<V>>),
     Unchanged(V),
     NotSet,
+}
+
+impl<V> Serialize for ActiveValue<V>
+where
+    V: Into<Value> + Clone + PartialEq + Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Self::Changed(nv, _) => V::serialize(nv, serializer),
+            Self::Unchanged(v) => V::serialize(v, serializer),
+            Self::NotSet => serializer.serialize_none(),
+        }
+    }
+}
+impl<'de, V> Deserialize<'de> for ActiveValue<V>
+where
+    V: Into<Value> + Clone + PartialEq + Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(Self::Changed(V::deserialize(deserializer)?, Box::new(ActiveValue::NotSet)))
+    }
 }
 
 impl<V> Default for ActiveValue<V>
