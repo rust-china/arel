@@ -13,16 +13,14 @@ async fn main() -> arel::Result<()> {
 
     println!("{:?}", std::any::type_name::<std::option::Option<Vec<i32>>>());
 
-    let first_user: entity::User = entity::User::query().fetch_one().await?;
-    let mut arel_first_user: entity::user::ArelUser = first_user.into();
-    println!("{:?}", arel_first_user.primary_values());
-    println!("db -->: {:?}", arel_first_user);
+    let mut first_user: entity::User = entity::User::query().fetch_one().await?;
+    println!("db -->: {:?}", first_user);
 
-    arel_first_user.r#type = Set(entity::user::Type::User);
-    arel_first_user.save().await?;
-    println!("update -->: {:?}", arel_first_user);
+    first_user.r#type = Set(entity::user::Type::User);
+    first_user.save().await?;
+    println!("update -->: {:?}", first_user);
 
-    let mut arel_new_user: entity::user::ArelUser = entity::user::ArelUser {
+    let mut arel_new_user: entity::User = entity::User {
         name: Set("hello"),
         gender: Set(entity::user::Gender::Male),
         ..Default::default()
@@ -35,18 +33,14 @@ async fn main() -> arel::Result<()> {
     println!("destroy -->: {:?}", arel_new_user);
 
     let first_user: entity::User = entity::User::query().fetch_one().await?;
-    println!("{:?}", serde_json::to_string(&first_user));
-    let active_user: entity::user::ArelUser = first_user.into();
 
-    let json = match serde_json::to_string(&active_user) {
+    let json = match serde_json::to_string(&first_user) {
         Ok(v) => v,
         Err(e) => return Err(e.into()),
     };
     println!("{:?}", json);
     let to_user: entity::user::User = serde_json::from_str(&json)?;
     println!("{:?}", to_user);
-    let to_arel_user: entity::user::ArelUser = serde_json::from_str(&json)?;
-    println!("{:?}", to_arel_user);
 
     Ok(())
 }

@@ -149,60 +149,52 @@ mod tests {
     }
     async fn test_query() -> anyhow::Result<()> {
         let first_user = sqlx::query_as::<_, User>("SELECT * FROM users LIMIT 1").fetch_one(arel::db::get_pool()?).await?;
-        assert_eq!(first_user.id, 1);
+        assert_eq!(first_user.id, arel::ActiveValue::Unchanged(1.into()));
         assert_eq!(first_user.gender, Some(Gender::Unknown));
         assert_eq!(first_user.r#type, Type::Admin);
 
-        let first_user: User = User::query().fetch_one().await?;
-        let first_user_json = serde_json::to_string(&first_user)?;
-
-        let arel_first_user: ArelUser = first_user.into();
-        let arel_first_user2: ArelUser = User::query().fetch_one().await?;
-        assert_eq!(arel_first_user, arel_first_user2);
-
-        let arel_first_user_json = serde_json::to_string(&arel_first_user2)?;
-        assert_eq!(first_user_json, arel_first_user_json);
+        let first_user2 = User::query().fetch_one().await?;
+        let first_user_json = serde_json::to_string(&first_user2)?;
+        assert_eq!(first_user_json, first_user_json);
 
         Ok(())
     }
     async fn test_insert() -> anyhow::Result<()> {
-        let mut arel_new_user = ArelUser {
+        let mut new_user = User {
             name: Set("hello"),
             gender: Set(Gender::Male),
             ..Default::default()
         };
-        assert!(!arel_new_user.persited());
-        arel_new_user.save().await?;
-        assert!(arel_new_user.persited());
-        assert_eq!(arel_new_user.name.value().unwrap(), "hello");
-        assert!(arel_new_user.id.value().is_some());
+        assert!(!new_user.persited());
+        new_user.save().await?;
+        assert!(new_user.persited());
+        assert_eq!(new_user.name.value().unwrap(), "hello");
+        assert!(new_user.id.value().is_some());
         Ok(())
     }
     async fn test_update() -> anyhow::Result<()> {
-        let user: User = User::query().order_desc("id").fetch_one().await?;
-        let mut arel_user: ArelUser = user.into();
-        let old_name = arel_user.name.clone();
-        arel_user.name.set("hello2");
-        arel_user.assign(&ArelUser { age: Set(20), ..Default::default() });
-        assert_eq!(arel_user.name, arel::ActiveValue::Changed("hello2".into(), Box::new(old_name)));
-        arel_user.save().await?;
-        assert_eq!(arel_user.name, arel::ActiveValue::Unchanged("hello2".into()));
+        let mut user = User::query().order_desc("id").fetch_one().await?;
+        let old_name = user.name.clone();
+        user.name.set("hello2");
+        user.assign(&User { age: Set(20), ..Default::default() });
+        assert_eq!(user.name, arel::ActiveValue::Changed("hello2".into(), Box::new(old_name)));
+        user.save().await?;
+        assert_eq!(user.name, arel::ActiveValue::Unchanged("hello2".into()));
 
         // increment
-        arel_user.increment("age", 5).await?;
-        assert_eq!(arel_user.age, arel::ActiveValue::Unchanged(25.into()));
-        arel_user.decrement("age", 5).await?;
-        assert_eq!(arel_user.age, arel::ActiveValue::Unchanged(20.into()));
+        user.increment("age", 5).await?;
+        assert_eq!(user.age, arel::ActiveValue::Unchanged(25.into()));
+        user.decrement("age", 5).await?;
+        assert_eq!(user.age, arel::ActiveValue::Unchanged(20.into()));
 
         Ok(())
     }
 
     async fn test_destroy() -> anyhow::Result<()> {
-        let user: User = User::query().order_desc("id").fetch_one().await?;
-        let mut arel_user: ArelUser = user.into();
-        let old_id = arel_user.id.clone();
-        arel_user.destroy().await?;
-        assert_eq!(arel_user.id, arel::ActiveValue::Changed(old_id.value().unwrap().clone(), Box::new(arel::ActiveValue::NotSet)));
+        let mut user = User::query().order_desc("id").fetch_one().await?;
+        let old_id = user.id.clone();
+        user.destroy().await?;
+        assert_eq!(user.id, arel::ActiveValue::Changed(old_id.value().unwrap().clone(), Box::new(arel::ActiveValue::NotSet)));
 
         Ok(())
     }

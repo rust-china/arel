@@ -18,6 +18,7 @@ pub mod traits;
 pub mod value;
 pub use async_trait;
 
+pub use anyhow;
 pub use arel_macros::{self, arel, arel_enum};
 pub use bytes;
 pub use chrono;
@@ -34,5 +35,5 @@ pub use value::{
     sub_value, Value,
 };
 
-pub use traits::{arel_attribute_from_row::ArelAttributeFromRow, arel_model::ArelModel, arel_persisted::ArelPersisted, Arel, SuperArel};
+pub use traits::{arel_attribute_from_row::ArelAttributeFromRow, arel_persisted::ArelPersisted, Arel, SuperArel};
 pub type Result<T> = std::result::Result<T, crate::Error>;

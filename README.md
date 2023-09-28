@@ -41,20 +41,20 @@ let count = User::query().select_sql("COUNT(*)").fetch_count().await?;
 println!("total: {}", count);
 
 // create
-let mut active_user = User {
+let mut user = User {
   name: Set("n1"),
   ..Default::default()
 };
-active_user.save().await?;
+user.save().await?;
 
 // select
-let user: User = User::query().r#where("id", 1).fetch_one().await?;
+let user = User::query().r#where("id", 1).fetch_one().await?;
 let uesrs: Vec<User> = User::query().where_range("id", ..=10).fetch_all().await?;
 
 // update
 let mut user: User = User::query().fetch_one().await?;
 // active_user.name.set("n-1");
-user.assign(&User {
+user.assign(&ArelUser {
     name: Set("n-1"),
     ..Default::default()
 });
@@ -158,12 +158,12 @@ User::with_transaction(|tx| {
     //       .execute(tx.as_mut())
     //       .await?;
     // }
-    let mut active_user = User {
+    let mut user = User {
       name: Set("n1"),
       r#type: Set("ADMIN"),
       ..Default::default()
     };
-    active_user.save_with_exec(tx.as_mut()).await?;
+    user.save_with_tx(tx).await?;
     Ok(None)
   })
 })
@@ -178,8 +178,8 @@ User::with_transaction(|tx| {
 <summary>increment</summary>
 
 ```rust
-let active_user = User::query().r#where("id", 1).fetch_one().await?;
-active_user.increment_save("lock_version", 5).await?;
+let user = User::query().r#where("id", 1).fetch_one().await?;
+user.increment("lock_version", 5).await?;
 ```
 
 </details>
