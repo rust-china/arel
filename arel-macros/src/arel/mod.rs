@@ -59,6 +59,7 @@ fn do_expand_arel(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStr
     let arel_trait_impl_primary_keys = arel_trait::impl_primary_keys(input)?;
     let arel_trait_impl_primary_values = arel_trait::impl_primary_values(input)?;
     let arel_trait_impl_assign = arel_trait::impl_assign(input)?;
+    let arel_trait_impl_is_dirty = arel_trait::impl_is_dirty(input)?;
     let arel_trait_impl_insert_with_exec = arel_trait::impl_insert_with_exec(input)?;
     let arel_trait_impl_update_with_exec = arel_trait::impl_update_with_exec(input)?;
 
@@ -96,6 +97,8 @@ fn do_expand_arel(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStr
             #arel_trait_impl_primary_values
             // fn assign(&mut self, other: &Self) -> &mut Self;
             #arel_trait_impl_assign
+            // fn is_dirty(&self) -> bool;
+            #arel_trait_impl_is_dirty
             // async fn insert_with_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: arel::sqlx::Executor<'a, Database = arel::db::Database>;
             #arel_trait_impl_insert_with_exec
             // async fn update_with_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: arel::sqlx::Executor<'a, Database = arel::db::Database>;

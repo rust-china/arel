@@ -24,7 +24,7 @@ pub trait SuperArel {
     }
     fn primary_values(&self) -> Vec<crate::Value>;
     fn assign(&mut self, other: &Self) -> &mut Self;
-
+    fn is_dirty(&self) -> bool;
     async fn insert_with_exec<'a, E>(&mut self, executor: E) -> crate::Result<()>
     where
         E: sqlx::Executor<'a, Database = crate::db::Database>;

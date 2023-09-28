@@ -120,6 +120,31 @@ pub(crate) fn impl_assign(input: &crate::ItemInput) -> syn::Result<proc_macro2::
     ))
 }
 
+// fn is_dirty(&self, other: &Self) -> &mut Self;
+pub(crate) fn impl_is_dirty(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
+    let fields = input.struct_fields()?;
+
+    let mut judge_fields_clause = vec![];
+    for field in fields.iter() {
+        let ident = &field.ident;
+        judge_fields_clause.push(quote::quote!(
+            match &self.#ident {
+                arel::ActiveValue::Changed(_, _) => {
+                    return true;
+                }
+                _ => ()
+            }
+        ));
+    }
+
+    Ok(quote::quote!(
+        fn is_dirty(&self) -> bool {
+            #(#judge_fields_clause)*
+            return false;
+        }
+    ))
+}
+
 // async fn insert_with_exec<'a, E>(&mut self, executor: E) -> arel::Result<()> where E: arel::sqlx::Executor<'a, Database = crate::db::Database>;
 pub(crate) fn impl_insert_with_exec(input: &crate::ItemInput) -> syn::Result<proc_macro2::TokenStream> {
     let fields = input.struct_fields()?;
