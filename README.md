@@ -54,7 +54,7 @@ let uesrs: Vec<User> = User::query().where_range("id", ..=10).fetch_all().await?
 // update
 let mut user: User = User::query().fetch_one().await?;
 // active_user.name.set("n-1");
-user.assign(&ArelUser {
+user.assign(&User {
     name: Set("n-1"),
     ..Default::default()
 });

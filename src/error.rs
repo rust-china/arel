@@ -12,6 +12,6 @@ pub enum Error {
     AnyhowError(#[from] anyhow::Error),
     #[error(transparent)]
     SerdeJsonError(#[from] serde_json::Error),
-    #[error("error: `{0}`")]
+    #[error("`{0}`")]
     Message(String),
 }

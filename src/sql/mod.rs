@@ -185,6 +185,18 @@ impl Sql {
             Err(err) => Err(anyhow::anyhow!(err.to_string()).into()),
         }
     }
+    pub async fn fetch_one_optional_as_with_exec<'a, T, E>(&self, executor: E) -> crate::Result<Option<T>>
+    where
+        for<'b> T: Send + Unpin + sqlx::FromRow<'b, crate::db::DatabaseRow>,
+        E: sqlx::Executor<'a, Database = crate::db::Database>,
+    {
+        let mut query_builder: QueryBuilder = self.try_into()?;
+        let query_as = query_builder.build_query_as::<T>();
+        match query_as.fetch_optional(executor).await {
+            Ok(val) => Ok(val),
+            Err(err) => Err(anyhow::anyhow!(err.to_string()).into()),
+        }
+    }
     #[allow(dead_code)]
     pub(crate) async fn fetch_all_with_exec<'a, E>(&self, executor: E) -> crate::Result<Vec<crate::db::DatabaseRow>>
     where

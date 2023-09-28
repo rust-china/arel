@@ -28,7 +28,7 @@ trait ArelSubFilterStatement: Debug {
 
 #[derive(Debug)]
 pub struct Filter<M: crate::Arel> {
-    sub_filters: Vec<Box<dyn ArelSubFilterStatement>>,
+    sub_filters: Vec<Box<dyn ArelSubFilterStatement + Sync + Send + 'static>>,
     _marker: PhantomData<M>,
 }
 impl<M: crate::Arel> Default for Filter<M> {
@@ -42,7 +42,7 @@ impl<M: crate::Arel> Default for Filter<M> {
 
 impl<M: crate::Arel> ArelStatement for Filter<M> {
     fn to_sql(&self) -> crate::Result<Option<crate::Sql>> {
-        let sub_filters: Vec<&Box<dyn ArelSubFilterStatement>> = self.sub_filters.iter().collect();
+        let sub_filters: Vec<&Box<dyn ArelSubFilterStatement + Sync + Send + 'static>> = self.sub_filters.iter().collect();
         if self.sub_filters.len() > 0 {
             let mut final_sql = crate::Sql::new("");
             for (idx, sub_filter) in sub_filters.into_iter().enumerate() {

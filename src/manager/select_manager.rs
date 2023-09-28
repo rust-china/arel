@@ -360,14 +360,31 @@ where
         let ret: T = self.to_sql()?.fetch_one_as_with_exec(executor).await?;
         Ok(ret)
     }
+    pub(crate) async fn fetch_one_optional_as_with_exec<'a, T, E>(&self, executor: E) -> crate::Result<Option<T>>
+    where
+        for<'b> T: Send + Unpin + sqlx::FromRow<'b, crate::db::DatabaseRow>,
+        E: sqlx::Executor<'a, Database = crate::db::Database>,
+    {
+        let ret: Option<T> = self.to_sql()?.fetch_one_optional_as_with_exec(executor).await?;
+        Ok(ret)
+    }
     pub async fn fetch_one_as<T>(&self) -> crate::Result<T>
     where
         for<'b> T: Send + Unpin + sqlx::FromRow<'b, crate::db::DatabaseRow>,
     {
         self.fetch_one_as_with_exec(M::pool()?).await
     }
+    pub async fn fetch_one_optional_as<T>(&self) -> crate::Result<Option<T>>
+    where
+        for<'b> T: Send + Unpin + sqlx::FromRow<'b, crate::db::DatabaseRow>,
+    {
+        self.fetch_one_optional_as_with_exec(M::pool()?).await
+    }
     pub async fn fetch_one(&self) -> crate::Result<M> {
         self.fetch_one_as().await
+    }
+    pub async fn fetch_one_optional(&self) -> crate::Result<Option<M>> {
+        self.fetch_one_optional_as().await
     }
     pub(crate) async fn fetch_all_with_exec<'a, T, E>(&self, executor: E) -> crate::Result<Vec<T>>
     where

@@ -157,6 +157,9 @@ mod tests {
         let first_user_json = serde_json::to_string(&first_user2)?;
         assert_eq!(first_user_json, first_user_json);
 
+        let user = User::query().r#where("id", 99999).fetch_one_optional().await?;
+        assert!(user.is_none());
+
         Ok(())
     }
     async fn test_insert() -> anyhow::Result<()> {
