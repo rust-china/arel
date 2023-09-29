@@ -130,19 +130,19 @@ where
     /// use arel::prelude::*;
     /// use arel::{Value, ActiveValue};
     /// let mut not_set: ActiveValue<i32> = arel::ActiveValue::NotSet;
-    /// assert_eq!(not_set.value(), None);
+    /// assert!(not_set.get_value().is_err());
     ///
     /// let mut unchanged = arel::ActiveValue::Unchanged(false);
-    /// assert_eq!(unchanged.value(), Some(&false));
+    /// assert_eq!(unchanged.get_value().unwrap(), &false);
     ///
     /// let mut changed = arel::ActiveValue::Changed(1, Box::new(ActiveValue::NotSet));
-    /// assert_eq!(changed.value(), Some(&1));
+    /// assert_eq!(changed.get_value().unwrap(), &1);
     /// ```
-    pub fn value(&self) -> Option<&V> {
+    pub fn get_value(&self) -> crate::Result<&V> {
         match self {
-            Self::Changed(nv, _) => Some(nv),
-            Self::Unchanged(v) => Some(v),
-            _ => None,
+            Self::Changed(nv, _) => Ok(nv),
+            Self::Unchanged(v) => Ok(v),
+            _ => Err(crate::Error::Message("value not set".into())),
         }
     }
 }

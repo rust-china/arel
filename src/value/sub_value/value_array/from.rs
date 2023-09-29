@@ -30,3 +30,21 @@ where
         }
     }
 }
+
+// === revert ===
+impl TryFrom<ValueArray> for Option<Vec<crate::Value>> {
+    type Error = crate::Error;
+    fn try_from(value: ValueArray) -> Result<Self, Self::Error> {
+        Ok(value.0)
+    }
+}
+
+impl TryFrom<ValueArray> for Vec<crate::Value> {
+    type Error = crate::Error;
+    fn try_from(value: ValueArray) -> Result<Self, Self::Error> {
+        match value.0 {
+            Some(v) => Ok(v),
+            None => Err(crate::Error::Message("Value is None!".into())),
+        }
+    }
+}

@@ -83,3 +83,21 @@ where
         }
     }
 }
+
+// === revert ===
+impl TryFrom<ValueString> for Option<String> {
+    type Error = crate::Error;
+    fn try_from(value: ValueString) -> Result<Self, Self::Error> {
+        Ok(value.0)
+    }
+}
+
+impl TryFrom<ValueString> for String {
+    type Error = crate::Error;
+    fn try_from(value: ValueString) -> Result<Self, Self::Error> {
+        match value.0 {
+            Some(v) => Ok(v),
+            None => Err(crate::Error::Message("Value is None!".into())),
+        }
+    }
+}

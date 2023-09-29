@@ -87,3 +87,21 @@ where
         }
     }
 }
+
+// === revert ===
+impl TryFrom<ValueChronoTimestamp> for Option<chrono::DateTime<chrono::FixedOffset>> {
+    type Error = crate::Error;
+    fn try_from(value: ValueChronoTimestamp) -> Result<Self, Self::Error> {
+        Ok(value.0)
+    }
+}
+
+impl TryFrom<ValueChronoTimestamp> for chrono::DateTime<chrono::FixedOffset> {
+    type Error = crate::Error;
+    fn try_from(value: ValueChronoTimestamp) -> Result<Self, Self::Error> {
+        match value.0 {
+            Some(v) => Ok(v),
+            None => Err(crate::Error::Message("Value is None!".into())),
+        }
+    }
+}

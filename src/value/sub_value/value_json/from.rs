@@ -55,3 +55,21 @@ where
         }
     }
 }
+
+// === revert ===
+impl TryFrom<ValueJson> for Option<serde_json::Value> {
+    type Error = crate::Error;
+    fn try_from(value: ValueJson) -> Result<Self, Self::Error> {
+        Ok(value.0)
+    }
+}
+
+impl TryFrom<ValueJson> for serde_json::Value {
+    type Error = crate::Error;
+    fn try_from(value: ValueJson) -> Result<Self, Self::Error> {
+        match value.0 {
+            Some(v) => Ok(v),
+            None => Err(crate::Error::Message("Value is None!".into())),
+        }
+    }
+}

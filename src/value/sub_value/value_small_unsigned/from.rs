@@ -52,3 +52,21 @@ where
         }
     }
 }
+
+// === revert ===
+impl TryFrom<ValueSmallUnsigned> for Option<u16> {
+    type Error = crate::Error;
+    fn try_from(value: ValueSmallUnsigned) -> Result<Self, Self::Error> {
+        Ok(value.0)
+    }
+}
+
+impl TryFrom<ValueSmallUnsigned> for u16 {
+    type Error = crate::Error;
+    fn try_from(value: ValueSmallUnsigned) -> Result<Self, Self::Error> {
+        match value.0 {
+            Some(v) => Ok(v),
+            None => Err(crate::Error::Message("Value is None!".into())),
+        }
+    }
+}

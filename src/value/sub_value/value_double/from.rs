@@ -52,3 +52,21 @@ where
         }
     }
 }
+
+// === revert ===
+impl TryFrom<ValueDouble> for Option<f64> {
+    type Error = crate::Error;
+    fn try_from(value: ValueDouble) -> Result<Self, Self::Error> {
+        Ok(value.0)
+    }
+}
+
+impl TryFrom<ValueDouble> for f64 {
+    type Error = crate::Error;
+    fn try_from(value: ValueDouble) -> Result<Self, Self::Error> {
+        match value.0 {
+            Some(v) => Ok(v),
+            None => Err(crate::Error::Message("Value is None!".into())),
+        }
+    }
+}
