@@ -106,6 +106,29 @@ where
     /// ```
     /// use arel::prelude::*;
     /// use arel::{Value, ActiveValue};
+    /// let mut not_set: ActiveValue<bool> = arel::ActiveValue::NotSet;
+    /// let unchanged = arel::ActiveValue::Unchanged(false);
+    /// not_set.assign(&unchanged);
+    /// assert_eq!(not_set, arel::ActiveValue::Changed(false, Box::new(ActiveValue::NotSet)));
+    /// ```
+    pub fn assign(&mut self, rhs: &Self) -> &mut Self {
+        match rhs {
+            Self::Changed(nv, _) => {
+                self.set(nv.clone());
+            }
+            Self::Unchanged(v) => {
+                self.set(v.clone());
+            }
+            Self::NotSet => (),
+        }
+        self
+    }
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arel::prelude::*;
+    /// use arel::{Value, ActiveValue};
     /// let mut not_set: ActiveValue<i32> = arel::ActiveValue::NotSet;
     /// assert_eq!(not_set.value(), None);
     ///
@@ -132,4 +155,31 @@ where
 {
     let v: V = to_v.into();
     ActiveValue::Changed(v, Box::new(ActiveValue::NotSet))
+}
+
+#[allow(non_snake_case)]
+pub fn SetChanged<V, ToV>(to_v: ToV) -> ActiveValue<V>
+where
+    V: Into<Value> + Clone + PartialEq,
+    ToV: Into<V>,
+{
+    Set(to_v)
+}
+
+#[allow(non_snake_case)]
+pub fn SetUnchanged<V, ToV>(to_v: ToV) -> ActiveValue<V>
+where
+    V: Into<Value> + Clone + PartialEq,
+    ToV: Into<V>,
+{
+    let v: V = to_v.into();
+    ActiveValue::Unchanged(v)
+}
+
+#[allow(non_snake_case)]
+pub fn SetNotSet<V>() -> ActiveValue<V>
+where
+    V: Into<Value> + Clone + PartialEq,
+{
+    ActiveValue::NotSet
 }

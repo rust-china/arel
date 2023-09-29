@@ -100,7 +100,10 @@ pub trait Arel: SuperArel + ArelPersisted + Send {
         self.before_save_with_tx(tx).await?;
         if self.persited() {
             self.before_update_with_tx(tx).await?;
-            self.update_with_exec(tx.as_mut()).await?;
+            // update when dirty
+            if self.is_dirty() {
+                self.update_with_exec(tx.as_mut()).await?;
+            }
             self.after_update_with_tx(tx).await?;
         } else {
             self.before_insert_with_tx(tx).await?;

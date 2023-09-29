@@ -14,7 +14,7 @@ chrono = { version = "0.4", features = ["serde"] }
 
 [package]
 name = "arel"
-version = "0.3.6"
+version = "0.3.7"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "a sql orm base sqlx"
@@ -22,6 +22,7 @@ authors = ["sanmu <578595193@qq.com>"]
 homepage = "https://github.com/rust-china/arel"
 categories = ["database"]
 keywords = ["async", "orm", "sqlite", "mysql", "postgres"]
+exclude = ["/example"]
 
 [features]
 default = ["with-json", "with-chrono"]
@@ -62,5 +63,5 @@ chrono = { version = "0.4", features = ["serde"], optional = true }
 uuid = { version = "1", optional = true }
 sqlx = { version = "0.7" }
 
-# arel-macros = { version = "0.3.6" }
+# arel-macros = { version = "0.3.7" }
 arel-macros = { path = "./arel-macros" }

@@ -31,7 +31,7 @@ pub use manager::SelectManager;
 pub use sql::Sql;
 pub use statements::{join::JoinConst, order::SortConst};
 pub use value::{
-    active_vulue::{ActiveValue, Set},
+    active_value::{ActiveValue, Set, SetChanged, SetNotSet, SetUnchanged},
     sub_value, Value,
 };
 
